@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Avatar, Button, Empty, Input, Space, Spin, Tag, Tooltip, App as AntdApp } from 'antd'
 import { RobotOutlined, SendOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
-import { api } from '../api'
+import { api, streamChat } from '../api'
 import { useAuth } from '../auth'
 
 interface Message {
@@ -59,21 +59,35 @@ export default function ChatPage() {
     const text = input.trim()
     if (!text || loading) return
 
-    setMessages((m) => [...m, { role: 'user', content: text }])
+    // 用户消息 + 占位的空 AI 气泡（token 逐段追加进去）
+    setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
     setInput('')
     setLoading(true)
     try {
-      const data = await api<{ answer: string }>('/api/chat', {
-        method: 'POST',
-        body: { message: text },
+      await streamChat(text, {
+        onToken: (token) =>
+          setMessages((m) => {
+            const copy = [...m]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, content: last.content + token }
+            }
+            return copy
+          }),
       })
-      setMessages((m) => [...m, { role: 'assistant', content: data.answer }])
     } catch (err: any) {
       message.error(err.message)
-      setMessages((m) => [
-        ...m,
-        { role: 'assistant', content: `请求失败：${err.message}，请稍后重试。` },
-      ])
+      setMessages((m) => {
+        const copy = [...m]
+        const last = copy[copy.length - 1]
+        if (last && last.role === 'assistant') {
+          copy[copy.length - 1] = {
+            ...last,
+            content: last.content || `请求失败：${err.message}，请稍后重试。`,
+          }
+        }
+        return copy
+      })
     } finally {
       setLoading(false)
     }
@@ -129,34 +143,34 @@ export default function ChatPage() {
             }
           />
         ) : (
-          messages.map((m, i) => (
-            <div key={i} className={`chat-message ${m.role}`}>
-              <Avatar
-                className="chat-message-avatar"
-                icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                style={
-                  m.role === 'user'
-                    ? { backgroundColor: '#4f46e5' }
-                    : { backgroundColor: '#e0e7ff', color: '#4338ca' }
-                }
-              />
-              <div className="chat-message-bubble">
-                <pre className="chat-message-content">{m.content}</pre>
+          messages.map((m, i) => {
+            const streaming = loading && i === messages.length - 1 && m.role === 'assistant'
+            return (
+              <div key={i} className={`chat-message ${m.role}`}>
+                <Avatar
+                  className="chat-message-avatar"
+                  icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                  style={
+                    m.role === 'user'
+                      ? { backgroundColor: '#4f46e5' }
+                      : { backgroundColor: '#e0e7ff', color: '#4338ca' }
+                  }
+                />
+                <div className="chat-message-bubble">
+                  {streaming && !m.content ? (
+                    <span className="chat-thinking">
+                      <Spin size="small" /> Agent 思考中...
+                    </span>
+                  ) : (
+                    <pre className="chat-message-content">
+                      {m.content}
+                      {streaming ? <span className="chat-cursor" /> : null}
+                    </pre>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
-        {loading && (
-          <div className="chat-message assistant">
-            <Avatar
-              className="chat-message-avatar"
-              icon={<RobotOutlined />}
-              style={{ backgroundColor: '#e0e7ff', color: '#4338ca' }}
-            />
-            <div className="chat-message-bubble">
-              <Spin size="small" /> <span className="chat-thinking">Agent 思考中...</span>
-            </div>
-          </div>
+            )
+          })
         )}
       </div>
 

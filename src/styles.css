@@ -182,7 +182,31 @@ body {
 .chat-thinking {
   color: #6b7280;
   font-size: 13px;
-  margin-left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 流式输出中的闪烁光标 */
+.chat-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: #4f46e5;
+  border-radius: 1px;
+  animation: chat-cursor-blink 0.9s step-start infinite;
+}
+
+.chat-message.user .chat-cursor {
+  background: #fff;
+}
+
+@keyframes chat-cursor-blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .chat-input-area {

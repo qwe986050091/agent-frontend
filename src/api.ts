@@ -75,3 +75,72 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
   }
   return data as T
 }
+
+/**
+ * 流式对话（SSE）：POST /api/chat/stream
+ *
+ * 服务端逐 token 推送 text/event-stream，这里用 fetch + ReadableStream
+ * 手动解析 SSE（EventSource 不支持 POST 和自定义请求头）。
+ *
+ * @param onToken 每收到一个 token 片段回调
+ * @param signal  AbortSignal，用于中断生成
+ */
+export async function streamChat(
+  message: string,
+  handlers: { onToken: (token: string) => void; signal?: AbortSignal },
+): Promise<void> {
+  let res: Response
+  try {
+    res = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}),
+      },
+      body: JSON.stringify({ message }),
+      signal: handlers.signal,
+    })
+  } catch (e: any) {
+    throw new ApiError(e?.message || '网络连接失败', 0)
+  }
+
+  if (res.status === 401) {
+    clearAuth()
+    if (!location.pathname.startsWith('/login')) location.href = '/login'
+    throw new ApiError('未登录或登录已过期', 401)
+  }
+  if (!res.ok || !res.body) {
+    const data = await res.json().catch(() => ({} as any))
+    throw new ApiError(data.message || `请求失败 (${res.status})`, res.status)
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    // 统一换行，按 SSE 规范：空行分隔事件，data: 开头为数据行
+    buffer += decoder.decode(value, { stream: true })
+    buffer = buffer.replace(/\r\n/g, '\n')
+
+    let sep: number
+    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+      const rawEvent = buffer.slice(0, sep)
+      buffer = buffer.slice(sep + 2)
+
+      const dataLines: string[] = []
+      for (const line of rawEvent.split('\n')) {
+        if (line.startsWith('data:')) {
+          dataLines.push(line.slice(5).replace(/^ /, ''))
+        }
+      }
+      if (dataLines.length === 0) continue
+
+      const data = dataLines.join('\n')
+      if (data === '[DONE]') return
+      handlers.onToken(data)
+    }
+  }
+}
