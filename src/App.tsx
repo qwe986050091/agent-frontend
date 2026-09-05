@@ -1,0 +1,36 @@
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { useAuth } from './auth'
+import MainLayout from './layouts/MainLayout'
+import LoginPage from './pages/LoginPage'
+import ChatPage from './pages/ChatPage'
+import SkillsPage from './pages/SkillsPage'
+
+/** 登录守卫：未登录跳转登录页 */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const location = useLocation()
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
+  }
+  return <>{children}</>
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route
+        element={
+          <RequireAuth>
+            <MainLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/" element={<ChatPage />} />
+        <Route path="/skills" element={<SkillsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
