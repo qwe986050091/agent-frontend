@@ -1,0 +1,136 @@
+/* ============================================================
+   Agent AI 对话助手 — 精致日系立绘品牌规范
+   干净透亮的蓝白界面 × 粉发立绘：蓝粉相映、高明度、低饱和
+   prefix: agent
+   ============================================================ */
+
+:root {
+  /* ---- 品牌主色（单一主色相：晴空蓝） ---- */
+  --agent-primary-50:  #eef4ff;
+  --agent-primary-100: #dce8ff;
+  --agent-primary-200: #bfd4ff;
+  --agent-primary-300: #93b6ff;
+  --agent-primary-400: #6a97ff;
+  --agent-primary-500: #4d86ff;   /* 品牌主色 */
+  --agent-primary-600: #3b6ff6;   /* hover / 强调 */
+  --agent-primary-700: #2f59d6;
+  --agent-primary-800: #2949ab;
+  --agent-primary-900: #263f87;
+
+  /* ---- 中性墨色（偏冷的深蓝灰，不用纯黑） ---- */
+  --agent-ink-900: #141c2b;
+  --agent-ink-800: #1d2738;
+  --agent-ink-700: #2c384c;
+  --agent-ink-600: #44506a;
+  --agent-ink-500: #5f6c84;
+  --agent-ink-400: #8590a6;
+  --agent-ink-300: #aab3c5;
+  --agent-ink-200: #d3dae7;
+  --agent-ink-100: #e7ecf4;
+
+  /* ---- 语义状态色（仅用于状态，不参与品牌/分类） ---- */
+  --state-success: #18b279;
+  --state-warning: #f0a028;
+  --state-error:   #ef4d6d;
+  --state-info:    #4d86ff;
+
+  /* 角色点缀色（粉发立绘呼应，仅用于桌宠/角色相关，不做大面积品牌色） */
+  --agent-pet-pink: #f17cad;
+  --agent-pet-mint: #2fc4a8;
+
+  /* ============ 语义别名（Tailwind 桥接） ============ */
+  --agent-background:        #f6f9ff;   /* 应用底色：极浅蓝白 */
+  --agent-foreground:        #1d2738;   /* 主文字 */
+  --agent-card:              #ffffff;   /* 卡片 */
+  --agent-card-foreground:   #1d2738;
+  --agent-popover:           #ffffff;
+  --agent-popover-foreground:#1d2738;
+  --agent-primary:           #4d86ff;
+  --agent-primary-foreground:#ffffff;
+  --agent-muted:             #eef3fc;   /* 浅灰蓝底 */
+  --agent-muted-foreground:  #5f6c84;   /* 次要文字 */
+  --agent-border:            #e4ebf7;   /* 干净的浅蓝灰描边 */
+  --agent-input:             #d9e2f2;
+  --agent-ring:              #4d86ff;
+
+  /* 侧边栏 */
+  --agent-sidebar:                  #fbfdff;
+  --agent-sidebar-foreground:       #2c384c;
+  --agent-sidebar-primary:          #4d86ff;
+  --agent-sidebar-primary-foreground:#ffffff;
+  --agent-sidebar-accent:           #eef4ff;
+  --agent-sidebar-accent-foreground:#2f59d6;
+
+  /* ---- 圆角（克制，最大 16px） ---- */
+  --agent-radius-sm: 4px;
+  --agent-radius-md: 8px;
+  --agent-radius-lg: 16px;
+  --agent-radius-full: 9999px;
+
+  /* ---- 字体 ---- */
+  --agent-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --agent-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+  /* ---- 阴影（静态面 alpha <= 0.05；浮层可更深） ---- */
+  --agent-shadow-card: 0 1px 2px rgba(23, 43, 92, 0.04), 0 8px 24px rgba(23, 43, 92, 0.05);
+  --agent-shadow-pop:  0 12px 40px rgba(23, 43, 92, 0.14);
+  --agent-shadow-glow: 0 8px 28px rgba(77, 134, 255, 0.22);
+}
+
+/* ============ 暗色模式（预留） ============ */
+.dark {
+  --agent-background:        #0e1626;
+  --agent-foreground:        #e8eefb;
+  --agent-card:              #16203a;
+  --agent-card-foreground:   #e8eefb;
+  --agent-popover:           #16203a;
+  --agent-popover-foreground:#e8eefb;
+  --agent-primary:           #6a97ff;
+  --agent-primary-foreground:#0b1120;
+  --agent-muted:             #1d2942;
+  --agent-muted-foreground:  #93a0bd;
+  --agent-border:            #263357;
+  --agent-input:             #2f3d63;
+  --agent-ring:              #6a97ff;
+  --agent-sidebar:                  #111b30;
+  --agent-sidebar-foreground:       #c6d0e6;
+  --agent-sidebar-primary:          #6a97ff;
+  --agent-sidebar-primary-foreground:#0b1120;
+  --agent-sidebar-accent:           #1d2942;
+  --agent-sidebar-accent-foreground:#bcd2ff;
+}
+
+/* ============ 基础排版 ============ */
+html, body {
+  font-family: var(--agent-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display { font-family: var(--agent-font-display); letter-spacing: -0.01em; }
+
+/* 精致日系立绘常用的柔光质感工具类 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--agent-shadow-card);
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, #2f59d6 0%, #4d86ff 45%, #6a97ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 柔和呼吸光晕（用于主视觉周围，克制使用） */
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-soft-float { animation: softFloat 6s ease-in-out infinite; }
+

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视觉概念总览 · Agent AI</title>
+    <style id="theme-vars">
+/* ============================================================
+   Agent AI 对话助手 — 精致日系立绘品牌规范
+   干净透亮的蓝白界面 × 粉发立绘：蓝粉相映、高明度、低饱和
+   prefix: agent
+   ============================================================ */
+
+:root {
+  /* ---- 品牌主色（单一主色相：晴空蓝） ---- */
+  --agent-primary-50:  #eef4ff;
+  --agent-primary-100: #dce8ff;
+  --agent-primary-200: #bfd4ff;
+  --agent-primary-300: #93b6ff;
+  --agent-primary-400: #6a97ff;
+  --agent-primary-500: #4d86ff;   /* 品牌主色 */
+  --agent-primary-600: #3b6ff6;   /* hover / 强调 */
+  --agent-primary-700: #2f59d6;
+  --agent-primary-800: #2949ab;
+  --agent-primary-900: #263f87;
+
+  /* ---- 中性墨色（偏冷的深蓝灰，不用纯黑） ---- */
+  --agent-ink-900: #141c2b;
+  --agent-ink-800: #1d2738;
+  --agent-ink-700: #2c384c;
+  --agent-ink-600: #44506a;
+  --agent-ink-500: #5f6c84;
+  --agent-ink-400: #8590a6;
+  --agent-ink-300: #aab3c5;
+  --agent-ink-200: #d3dae7;
+  --agent-ink-100: #e7ecf4;
+
+  /* ---- 语义状态色（仅用于状态，不参与品牌/分类） ---- */
+  --state-success: #18b279;
+  --state-warning: #f0a028;
+  --state-error:   #ef4d6d;
+  --state-info:    #4d86ff;
+
+  /* 角色点缀色（粉发立绘呼应，仅用于桌宠/角色相关，不做大面积品牌色） */
+  --agent-pet-pink: #f17cad;
+  --agent-pet-mint: #2fc4a8;
+
+  /* ============ 语义别名（Tailwind 桥接） ============ */
+  --agent-background:        #f6f9ff;
+  --agent-foreground:        #1d2738;
+  --agent-card:              #ffffff;
+  --agent-card-foreground:   #1d2738;
+  --agent-popover:           #ffffff;
+  --agent-popover-foreground:#1d2738;
+  --agent-primary:           #4d86ff;
+  --agent-primary-foreground:#ffffff;
+  --agent-muted:             #eef3fc;
+  --agent-muted-foreground:  #5f6c84;
+  --agent-border:            #e4ebf7;
+  --agent-input:             #d9e2f2;
+  --agent-ring:              #4d86ff;
+
+  /* 侧边栏 */
+  --agent-sidebar:                  #fbfdff;
+  --agent-sidebar-foreground:       #2c384c;
+  --agent-sidebar-primary:          #4d86ff;
+  --agent-sidebar-primary-foreground:#ffffff;
+  --agent-sidebar-accent:           #eef4ff;
+  --agent-sidebar-accent-foreground:#2f59d6;
+
+  /* ---- 圆角（克制，最大 16px） ---- */
+  --agent-radius-sm: 4px;
+  --agent-radius-md: 8px;
+  --agent-radius-lg: 16px;
+  --agent-radius-full: 9999px;
+
+  /* ---- 字体 ---- */
+  --agent-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --agent-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+  /* ---- 阴影（静态面 alpha <= 0.05；浮层可更深） ---- */
+  --agent-shadow-card: 0 1px 2px rgba(23, 43, 92, 0.04), 0 8px 24px rgba(23, 43, 92, 0.05);
+  --agent-shadow-pop:  0 12px 40px rgba(23, 43, 92, 0.14);
+  --agent-shadow-glow: 0 8px 28px rgba(77, 134, 255, 0.22);
+}
+
+/* ============ 暗色模式（预留） ============ */
+.dark {
+  --agent-background:        #0e1626;
+  --agent-foreground:        #e8eefb;
+  --agent-card:              #16203a;
+  --agent-card-foreground:   #e8eefb;
+  --agent-popover:           #16203a;
+  --agent-popover-foreground:#e8eefb;
+  --agent-primary:           #6a97ff;
+  --agent-primary-foreground:#0b1120;
+  --agent-muted:             #1d2942;
+  --agent-muted-foreground:  #93a0bd;
+  --agent-border:            #263357;
+  --agent-input:             #2f3d63;
+  --agent-ring:              #6a97ff;
+  --agent-sidebar:                  #111b30;
+  --agent-sidebar-foreground:       #c6d0e6;
+  --agent-sidebar-primary:          #6a97ff;
+  --agent-sidebar-primary-foreground:#0b1120;
+  --agent-sidebar-accent:           #1d2942;
+  --agent-sidebar-accent-foreground:#bcd2ff;
+}
+
+/* ============ 基础排版 ============ */
+html, body {
+  font-family: var(--agent-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display { font-family: var(--agent-font-display); letter-spacing: -0.01em; }
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--agent-shadow-card);
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, #2f59d6 0%, #4d86ff 45%, #6a97ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-soft-float { animation: softFloat 6s ease-in-out infinite; }
+
+/* ============ 桌宠 Desk Pet ============ */
+@keyframes petFloat {
+  0%, 100% { transform: translateY(0) rotate(-1.6deg); }
+  50%      { transform: translateY(-9px) rotate(1.6deg); }
+}
+.animate-pet-float { animation: petFloat 3.8s ease-in-out infinite; }
+
+@keyframes petHalo {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+.pet-halo {
+  background: radial-gradient(circle, rgba(77,134,255,0.32) 0%, rgba(241,124,173,0.18) 45%, transparent 70%);
+  animation: petHalo 3.8s ease-in-out infinite;
+}
+
+@keyframes petShadow {
+  0%, 100% { transform: scaleX(1);    opacity: .5; }
+  50%      { transform: scaleX(0.8);  opacity: .3; }
+}
+.pet-shadow {
+  background: radial-gradient(ellipse, rgba(23,43,92,0.22), transparent 70%);
+  animation: petShadow 3.8s ease-in-out infinite;
+}
+
+#pet-bubble { transition: opacity .32s ease, transform .32s ease; }
+#pet-bubble.show { opacity: 1 !important; transform: translateY(0) !important; pointer-events: auto; }
+#pet-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px; height: 12px;
+  background: var(--agent-card);
+  border-right: 1px solid var(--agent-border);
+  border-bottom: 1px solid var(--agent-border);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--agent-background);
+    --color-foreground: var(--agent-foreground);
+    --color-card: var(--agent-card);
+    --color-card-foreground: var(--agent-card-foreground);
+    --color-popover: var(--agent-popover);
+    --color-popover-foreground: var(--agent-popover-foreground);
+    --color-primary: var(--agent-primary);
+    --color-primary-foreground: var(--agent-primary-foreground);
+    --color-muted: var(--agent-muted);
+    --color-muted-foreground: var(--agent-muted-foreground);
+    --color-border: var(--agent-border);
+    --color-input: var(--agent-input);
+    --color-ring: var(--agent-ring);
+    --color-sidebar: var(--agent-sidebar);
+    --color-sidebar-foreground: var(--agent-sidebar-foreground);
+    --color-sidebar-primary: var(--agent-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--agent-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--agent-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--agent-sidebar-accent-foreground);
+    --radius-sm: var(--agent-radius-sm);
+    --radius-md: var(--agent-radius-md);
+    --radius-lg: var(--agent-radius-lg);
+  }
+  @layer base {
+    body { background: var(--agent-background); color: var(--agent-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--agent-background); }
+      .text-background { color: var(--agent-background); }
+      .border-background { border-color: var(--agent-background); }
+      .ring-background { --tw-ring-color: var(--agent-background); }
+      .bg-foreground { background-color: var(--agent-foreground); }
+      .text-foreground { color: var(--agent-foreground); }
+      .border-foreground { border-color: var(--agent-foreground); }
+      .ring-foreground { --tw-ring-color: var(--agent-foreground); }
+      .bg-card { background-color: var(--agent-card); }
+      .text-card { color: var(--agent-card); }
+      .border-card { border-color: var(--agent-card); }
+      .ring-card { --tw-ring-color: var(--agent-card); }
+      .bg-card-foreground { background-color: var(--agent-card-foreground); }
+      .text-card-foreground { color: var(--agent-card-foreground); }
+      .border-card-foreground { border-color: var(--agent-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--agent-card-foreground); }
+      .bg-popover { background-color: var(--agent-popover); }
+      .text-popover { color: var(--agent-popover); }
+      .border-popover { border-color: var(--agent-popover); }
+      .ring-popover { --tw-ring-color: var(--agent-popover); }
+      .bg-popover-foreground { background-color: var(--agent-popover-foreground); }
+      .text-popover-foreground { color: var(--agent-popover-foreground); }
+      .border-popover-foreground { border-color: var(--agent-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--agent-popover-foreground); }
+      .bg-primary { background-color: var(--agent-primary); }
+      .text-primary { color: var(--agent-primary); }
+      .border-primary { border-color: var(--agent-primary); }
+      .ring-primary { --tw-ring-color: var(--agent-primary); }
+      .bg-primary-foreground { background-color: var(--agent-primary-foreground); }
+      .text-primary-foreground { color: var(--agent-primary-foreground); }
+      .border-primary-foreground { border-color: var(--agent-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--agent-primary-foreground); }
+      .bg-muted { background-color: var(--agent-muted); }
+      .text-muted { color: var(--agent-muted); }
+      .border-muted { border-color: var(--agent-muted); }
+      .ring-muted { --tw-ring-color: var(--agent-muted); }
+      .bg-muted-foreground { background-color: var(--agent-muted-foreground); }
+      .text-muted-foreground { color: var(--agent-muted-foreground); }
+      .border-muted-foreground { border-color: var(--agent-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--agent-muted-foreground); }
+      .bg-border { background-color: var(--agent-border); }
+      .text-border { color: var(--agent-border); }
+      .border-border { border-color: var(--agent-border); }
+      .ring-border { --tw-ring-color: var(--agent-border); }
+      .bg-input { background-color: var(--agent-input); }
+      .text-input { color: var(--agent-input); }
+      .border-input { border-color: var(--agent-input); }
+      .ring-input { --tw-ring-color: var(--agent-input); }
+      .bg-ring { background-color: var(--agent-ring); }
+      .text-ring { color: var(--agent-ring); }
+      .border-ring { border-color: var(--agent-ring); }
+      .ring-ring { --tw-ring-color: var(--agent-ring); }
+      .bg-sidebar { background-color: var(--agent-sidebar); }
+      .text-sidebar { color: var(--agent-sidebar); }
+      .border-sidebar { border-color: var(--agent-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--agent-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--agent-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--agent-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--agent-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--agent-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--agent-sidebar-primary); }
+      .text-sidebar-primary { color: var(--agent-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--agent-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--agent-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--agent-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--agent-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--agent-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--agent-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--agent-sidebar-accent); }
+      .text-sidebar-accent { color: var(--agent-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--agent-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--agent-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--agent-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--agent-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--agent-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--agent-sidebar-accent-foreground); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="bg-background text-foreground overflow-hidden">
+      <!-- ============ 顶部导航 ============ -->
+      <header class="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+        <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          <div class="flex items-center gap-2.5">
+            <img src="../assets/assistant-avatar.jpg" alt="Agent AI" class="h-9 w-9 rounded-full ring-2 ring-primary/20" />
+            <span class="font-display text-[17px] font-bold tracking-tight">Agent AI <span class="text-primary">对话助手</span></span>
+          </div>
+          <nav class="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+            <a class="transition-colors hover:text-foreground" href="#concept">设计概念</a>
+            <a class="transition-colors hover:text-foreground" href="#color">色彩</a>
+            <a class="transition-colors hover:text-foreground" href="#type">字体</a>
+            <a class="transition-colors hover:text-foreground" href="#screens">页面稿</a>
+          </nav>
+          <button data-dom-id="goto-login" class="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-[0_8px_20px_rgba(77,134,255,0.28)] transition-transform hover:-translate-y-0.5">
+            进入产品
+          </button>
+        </div>
+      </header>
+
+      <!-- ============ Hero 主视觉 ============ -->
+      <section id="concept" class="relative">
+        <div class="pointer-events-none absolute inset-0">
+          <div class="absolute -right-32 -top-24 h-[560px] w-[560px] rounded-full bg-primary/10 blur-3xl"></div>
+          <div class="absolute left-1/4 top-40 h-72 w-72 rounded-full bg-primary/10 blur-3xl"></div>
+        </div>
+        <div class="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 px-6 pb-10 pt-16 lg:grid-cols-2 lg:pt-24">
+          <div>
+            <span class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-primary">
+              <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+              视觉概念 · 精致日系立绘
+            </span>
+            <h1 class="mt-6 font-display text-5xl font-bold leading-[1.12] tracking-tight lg:text-6xl">
+              与你的 AI 助手<br />
+              <span class="text-gradient">温柔而高效地对话</span>
+            </h1>
+            <p class="mt-6 max-w-md text-[15px] leading-8 text-muted-foreground">
+              以一位精致的粉发 AI 少女为品牌灵魂，用干净透亮的蓝白界面呼应她的柔和粉调，蓝粉相映，
+              配合克制的留白与柔光质感，让工具型产品也拥有高级、治愈、值得信赖的第一眼。
+            </p>
+            <div class="mt-9 flex flex-wrap items-center gap-4">
+              <button data-dom-id="goto-chat" class="rounded-full bg-primary px-7 py-3 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_rgba(77,134,255,0.32)] transition-transform hover:-translate-y-0.5">
+                查看对话页设计稿
+              </button>
+              <button data-dom-id="goto-knowledge" class="rounded-full border border-border bg-card px-7 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary">
+                浏览全部页面
+              </button>
+            </div>
+            <div class="mt-12 flex items-center gap-10">
+              <div><div class="font-display text-2xl font-bold text-foreground">6</div><div class="mt-1 text-xs text-muted-foreground">核心页面稿</div></div>
+              <div class="h-10 w-px bg-border"></div>
+              <div><div class="font-display text-2xl font-bold text-foreground">1</div><div class="mt-1 text-xs text-muted-foreground">统一品牌主色</div></div>
+              <div class="h-10 w-px bg-border"></div>
+              <div><div class="font-display text-2xl font-bold text-foreground">100%</div><div class="mt-1 text-xs text-muted-foreground">立绘资产复用</div></div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="absolute inset-0 -z-10 mx-auto h-[85%] w-[85%] self-center rounded-full bg-gradient-to-b from-primary/15 to-transparent blur-2xl"></div>
+            <img src="../assets/character-splash.jpg" alt="Agent AI 主视觉立绘" class="animate-soft-float mx-auto w-full max-w-[460px] rounded-[28px] object-cover object-top shadow-[0_30px_80px_rgba(77,134,255,0.18)]" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 设计原则 ============ -->
+      <section class="mx-auto max-w-7xl px-6 py-16">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(23,43,92,0.04)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="sparkles" class="h-5 w-5"></i></div>
+            <h3 class="mt-4 font-display text-base font-semibold">精致立绘</h3>
+            <p class="mt-2 text-sm leading-6 text-muted-foreground">修长比例、细腻光影的高端日系插画，替代廉价贴纸感吉祥物。</p>
+          </div>
+          <div class="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(23,43,92,0.04)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="droplets" class="h-5 w-5"></i></div>
+            <h3 class="mt-4 font-display text-base font-semibold">干净透亮</h3>
+            <p class="mt-2 text-sm leading-6 text-muted-foreground">高明度、低饱和蓝白调，背景不堆元素，告别视觉污染。</p>
+          </div>
+          <div class="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(23,43,92,0.04)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="maximize-2" class="h-5 w-5"></i></div>
+            <h3 class="mt-4 font-display text-base font-semibold">克制留白</h3>
+            <p class="mt-2 text-sm leading-6 text-muted-foreground">充足呼吸空间与柔和光晕，让信息层级清晰、视线放松。</p>
+          </div>
+          <div class="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(23,43,92,0.04)]">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="palette" class="h-5 w-5"></i></div>
+            <h3 class="mt-4 font-display text-base font-semibold">单一主色</h3>
+            <p class="mt-2 text-sm leading-6 text-muted-foreground">界面以晴空蓝为主色，把粉调留给角色点缀，蓝粉相映、状态色独立，品牌记忆点更强。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 色彩系统 ============ -->
+      <section id="color" class="border-y border-border/60 bg-card/40">
+        <div class="mx-auto max-w-7xl px-6 py-20">
+          <div class="max-w-xl">
+            <span class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Color</span>
+            <h2 class="mt-3 font-display text-3xl font-bold tracking-tight">晴空蓝主色体系</h2>
+            <p class="mt-3 text-sm leading-7 text-muted-foreground">从浅到深 9 级主色阶，配合冷调中性墨色与独立语义状态色，干净、和谐、可扩展。</p>
+          </div>
+          <div class="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div class="lg:col-span-2">
+              <div class="text-xs font-medium text-muted-foreground">主色阶 Primary</div>
+              <div class="mt-3 grid grid-cols-9 gap-2">
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-50)"></div><div class="text-center text-[10px] text-muted-foreground">50</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-100)"></div><div class="text-center text-[10px] text-muted-foreground">100</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-200)"></div><div class="text-center text-[10px] text-muted-foreground">200</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-300)"></div><div class="text-center text-[10px] text-muted-foreground">300</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg ring-2 ring-primary/30" style="background:var(--agent-primary-400)"></div><div class="text-center text-[10px] text-muted-foreground">400</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg ring-2 ring-primary" style="background:var(--agent-primary-500)"></div><div class="text-center text-[10px] font-semibold text-primary">500</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-600)"></div><div class="text-center text-[10px] text-muted-foreground">600</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-700)"></div><div class="text-center text-[10px] text-muted-foreground">700</div></div>
+                <div class="space-y-2"><div class="h-16 rounded-lg" style="background:var(--agent-primary-900)"></div><div class="text-center text-[10px] text-muted-foreground">900</div></div>
+              </div>
+              <div class="mt-8 text-xs font-medium text-muted-foreground">中性墨色 Neutral</div>
+              <div class="mt-3 grid grid-cols-5 gap-2">
+                <div class="space-y-2"><div class="h-12 rounded-lg" style="background:var(--agent-ink-100)"></div><div class="text-center text-[10px] text-muted-foreground">100</div></div>
+                <div class="space-y-2"><div class="h-12 rounded-lg" style="background:var(--agent-ink-300)"></div><div class="text-center text-[10px] text-muted-foreground">300</div></div>
+                <div class="space-y-2"><div class="h-12 rounded-lg" style="background:var(--agent-ink-500)"></div><div class="text-center text-[10px] text-muted-foreground">500</div></div>
+                <div class="space-y-2"><div class="h-12 rounded-lg" style="background:var(--agent-ink-700)"></div><div class="text-center text-[10px] text-muted-foreground">700</div></div>
+                <div class="space-y-2"><div class="h-12 rounded-lg" style="background:var(--agent-ink-900)"></div><div class="text-center text-[10px] text-muted-foreground">900</div></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-muted-foreground">语义状态色 State</div>
+              <div class="mt-3 space-y-2.5">
+                <div class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"><span class="h-4 w-4 rounded-full" style="background:var(--state-success)"></span><span class="text-sm">成功 Success</span><span class="ml-auto text-xs text-muted-foreground">#1BB387</span></div>
+                <div class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"><span class="h-4 w-4 rounded-full" style="background:var(--state-warning)"></span><span class="text-sm">警告 Warning</span><span class="ml-auto text-xs text-muted-foreground">#F0A028</span></div>
+                <div class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"><span class="h-4 w-4 rounded-full" style="background:var(--state-error)"></span><span class="text-sm">错误 Error</span><span class="ml-auto text-xs text-muted-foreground">#EF4D6D</span></div>
+                <div class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"><span class="h-4 w-4 rounded-full" style="background:var(--state-info)"></span><span class="text-sm">信息 Info</span><span class="ml-auto text-xs text-muted-foreground">#4D86FF</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 字体 ============ -->
+      <section id="type" class="mx-auto max-w-7xl px-6 py-20">
+        <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Typography</span>
+            <h2 class="mt-3 font-display text-3xl font-bold tracking-tight">清晰而有温度的排版</h2>
+            <p class="mt-3 max-w-md text-sm leading-7 text-muted-foreground">Inter + 系统中文黑体，标题收紧字距、正文舒展行高，保证界面信息在精致插画前依旧清晰易读。</p>
+            <div class="mt-8 space-y-3">
+              <div class="flex items-baseline gap-4"><span class="w-10 text-xs text-muted-foreground">H1</span><span class="font-display text-4xl font-bold tracking-tight">早上好，朋友</span></div>
+              <div class="flex items-baseline gap-4"><span class="w-10 text-xs text-muted-foreground">H2</span><span class="font-display text-2xl font-semibold">知识库</span></div>
+              <div class="flex items-baseline gap-4"><span class="w-10 text-xs text-muted-foreground">Body</span><span class="text-[15px] text-muted-foreground">有问题，随便问 —— 正文 15px / 行高 1.75</span></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-center">
+            <img src="../assets/assistant-avatar.jpg" alt="AI 助手头像" class="h-56 w-56 rounded-full object-cover shadow-[0_20px_60px_rgba(77,134,255,0.2)] ring-8 ring-card" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面稿索引 ============ -->
+      <section id="screens" class="border-t border-border/60 bg-card/40">
+        <div class="mx-auto max-w-7xl px-6 py-20">
+          <div class="flex items-end justify-between">
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Screens</span>
+              <h2 class="mt-3 font-display text-3xl font-bold tracking-tight">逐页设计稿</h2>
+              <p class="mt-3 text-sm text-muted-foreground">点击卡片可跳转到对应页面的高保真设计稿。</p>
+            </div>
+          </div>
+          <div class="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <button data-dom-id="goto-login" class="group rounded-2xl border border-border bg-card p-5 text-left shadow-[0_1px_2px_rgba(23,43,92,0.04)] transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_16px_40px_rgba(77,134,255,0.12)]">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="log-in" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 font-display text-base font-semibold">登录 / 注册</h3>
+              <p class="mt-1.5 text-sm leading-6 text-muted-foreground">立绘主视觉 + 玻璃表单卡片</p>
+              <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">查看 <i data-lucide="arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1"></i></span>
+            </button>
+            <button data-dom-id="goto-chat" class="group rounded-2xl border border-border bg-card p-5 text-left shadow-[0_1px_2px_rgba(23,43,92,0.04)] transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_16px_40px_rgba(77,134,255,0.12)]">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="message-square" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 font-display text-base font-semibold">对话</h3>
+              <p class="mt-1.5 text-sm leading-6 text-muted-foreground">欢迎空态与流式对话</p>
+              <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">查看 <i data-lucide="arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1"></i></span>
+            </button>
+            <button data-dom-id="goto-knowledge" class="group rounded-2xl border border-border bg-card p-5 text-left shadow-[0_1px_2px_rgba(23,43,92,0.04)] transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_16px_40px_rgba(77,134,255,0.12)]">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="book-open" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 font-display text-base font-semibold">知识库</h3>
+              <p class="mt-1.5 text-sm leading-6 text-muted-foreground">文档上传与 RAG 检索</p>
+              <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">查看 <i data-lucide="arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1"></i></span>
+            </button>
+            <button data-dom-id="goto-skills" class="group rounded-2xl border border-border bg-card p-5 text-left shadow-[0_1px_2px_rgba(23,43,92,0.04)] transition-all hover:-translate-y-1 hover:border-primary/40 hover:shadow-[0_16px_40px_rgba(77,134,255,0.12)]">
+              <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="layout-grid" class="h-5 w-5"></i></div>
+              <h3 class="mt-4 font-display text-base font-semibold">技能管理</h3>
+              <p class="mt-1.5 text-sm leading-6 text-muted-foreground">技能卡片与挂载</p>
+              <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">查看 <i data-lucide="arrow-right" class="h-4 w-4 transition-transform group-hover:translate-x-1"></i></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="border-t border-border/60">
+        <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
+          <div class="flex items-center gap-2">
+            <img src="../assets/assistant-avatar.jpg" alt="" class="h-6 w-6 rounded-full" />
+            <span>Agent AI 对话助手 · 视觉概念稿</span>
+          </div>
+          <span>精致日系立绘 · 蓝粉相映 · 克制留白</span>
+        </div>
+      </footer>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

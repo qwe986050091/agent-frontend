@@ -7,10 +7,12 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  RobotOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import DeskPet from '../components/DeskPet'
 
 const NAV_ITEMS = [
   { key: '/', icon: <EditOutlined />, label: '新聊天' },
@@ -40,7 +42,12 @@ export default function MainLayout() {
       <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="app-sidebar-inner">
           <div className="sidebar-header">
-            <span className="sidebar-brand">Agent 助手</span>
+            <span className="sidebar-brand">
+              <span className="sidebar-brand-dot">
+                <RobotOutlined />
+              </span>
+              Agent 助手
+            </span>
             <button
               type="button"
               className="sidebar-icon-btn"
@@ -115,6 +122,9 @@ export default function MainLayout() {
         )}
         <Outlet />
       </main>
+
+      {/* 桌宠小助手：全局悬浮，支持拖拽 / 跟随 / 打盹 */}
+      <DeskPet />
     </div>
   )
 }

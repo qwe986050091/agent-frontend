@@ -1,0 +1,189 @@
+{
+  "data": [
+    {
+      "id": "image-001",
+      "title": "品牌主图标",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698400000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/brand-logo.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "AI 助手头像",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698401000,
+      "canvasData": {
+        "x": 480,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/assistant-avatar.jpg"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "登录页背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698402000,
+      "canvasData": {
+        "x": 960,
+        "y": 0,
+        "naturalSize": {
+          "width": 2560,
+          "height": 1440
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/bg-login.jpg"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "对话页背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698403000,
+      "canvasData": {
+        "x": 1440,
+        "y": 0,
+        "naturalSize": {
+          "width": 2560,
+          "height": 1440
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/bg-chat.jpg"
+      }
+    },
+    {
+      "id": "image-005",
+      "title": "对话欢迎页插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698404000,
+      "canvasData": {
+        "x": 1920,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/empty-welcome.jpg"
+      }
+    },
+    {
+      "id": "image-006",
+      "title": "知识库空态插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698405000,
+      "canvasData": {
+        "x": 2400,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/empty-knowledge.jpg"
+      }
+    },
+    {
+      "id": "image-007",
+      "title": "技能管理空态插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698406000,
+      "canvasData": {
+        "x": 2880,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/empty-skills.jpg"
+      }
+    },
+    {
+      "id": "image-008",
+      "title": "上传拖拽引导插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698407000,
+      "canvasData": {
+        "x": 3360,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/upload-guide.jpg"
+      }
+    },
+    {
+      "id": "image-009",
+      "title": "网络错误状态插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698408000,
+      "canvasData": {
+        "x": 3840,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/state-network-error.jpg"
+      }
+    },
+    {
+      "id": "image-010",
+      "title": "404 页面插画",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788698409000,
+      "canvasData": {
+        "x": 4320,
+        "y": 0,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/state-404.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "freeSize",
+    "projectName": "Agent AI 二次元品牌图片素材包"
+  }
+}
