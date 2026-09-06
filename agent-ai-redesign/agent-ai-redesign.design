@@ -1,0 +1,353 @@
+{
+  "data": [
+    {
+      "id": "page-concept",
+      "title": "视觉概念总览",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700200000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 2748,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-c9f507b0",
+          "measuredAt": 1788705009027
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/concept.html",
+        "interactions": [
+          {
+            "domId": "goto-login",
+            "targetPageId": "page-login",
+            "transitionLabel": "进入产品"
+          },
+          {
+            "domId": "goto-chat",
+            "targetPageId": "page-chat-welcome",
+            "transitionLabel": "查看对话页"
+          },
+          {
+            "domId": "goto-knowledge",
+            "targetPageId": "page-knowledge",
+            "transitionLabel": "浏览页面"
+          },
+          {
+            "domId": "goto-skills",
+            "targetPageId": "page-skills",
+            "transitionLabel": "查看技能管理",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-login",
+      "title": "登录页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700201000,
+      "canvasData": {
+        "x": 480,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-a15082e7",
+          "measuredAt": 1788705009027
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/login.html",
+        "interactions": [
+          {
+            "domId": "login-submit",
+            "targetPageId": "page-chat-welcome",
+            "transitionLabel": "登录成功"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-chat-welcome",
+      "title": "对话 · 欢迎空态",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700202000,
+      "canvasData": {
+        "x": 960,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-79322bd7",
+          "measuredAt": 1788706876649
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/chat-welcome.html",
+        "interactions": [
+          {
+            "domId": "goto-thread",
+            "targetPageId": "page-chat-thread",
+            "transitionLabel": "发送消息"
+          },
+          {
+            "domId": "nav-knowledge",
+            "targetPageId": "page-knowledge",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-skills",
+            "targetPageId": "page-skills",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-chat-thread",
+      "title": "对话 · 进行中",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700203000,
+      "canvasData": {
+        "x": 1440,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-307142d0",
+          "measuredAt": 1788706876649
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/chat-thread.html",
+        "interactions": [
+          {
+            "domId": "nav-newchat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-chat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-knowledge",
+            "targetPageId": "page-knowledge",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-skills",
+            "targetPageId": "page-skills",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-knowledge",
+      "title": "知识库",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700204000,
+      "canvasData": {
+        "x": 480,
+        "y": 373,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-77e1b0f8",
+          "measuredAt": 1788706876649
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/knowledge.html",
+        "interactions": [
+          {
+            "domId": "nav-newchat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-chat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-skills",
+            "targetPageId": "page-skills",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-skills",
+      "title": "技能管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1788700205000,
+      "canvasData": {
+        "x": 0,
+        "y": 912,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 1440,
+          "sourceHash": "fnv1a-8cdd0bb4",
+          "measuredAt": 1788706876649
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/skills.html",
+        "interactions": [
+          {
+            "domId": "nav-newchat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-chat",
+            "targetPageId": "page-chat-welcome",
+            "hideEdge": true
+          },
+          {
+            "domId": "nav-knowledge",
+            "targetPageId": "page-knowledge",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "品牌主视觉立绘",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788700300000,
+      "canvasData": {
+        "x": 0,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1680,
+          "height": 2240
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/character-splash.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "AI 助手头像",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788700301000,
+      "canvasData": {
+        "x": 480,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/assistant-avatar.jpg"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "备选 A · 托腮思考",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788700400000,
+      "canvasData": {
+        "x": 960,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1680,
+          "height": 2240
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/splash-variant-A-hand.jpg"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "备选 B · 双手交握（推荐）",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788700401000,
+      "canvasData": {
+        "x": 1440,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1680,
+          "height": 2240
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/splash-variant-B-clasp.jpg"
+      }
+    },
+    {
+      "id": "image-005",
+      "title": "备选 C · 侧身撩发",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788700402000,
+      "canvasData": {
+        "x": 1920,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1680,
+          "height": 2240
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/splash-variant-C-side.jpg"
+      }
+    },
+    {
+      "id": "image-006",
+      "title": "桌宠 · Q 版坐姿小助手",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1788702000000,
+      "canvasData": {
+        "x": 2400,
+        "y": 1285,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/pet-mascot.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "Agent AI 精致立绘视觉重设计",
+    "designLibrary": null
+  }
+}

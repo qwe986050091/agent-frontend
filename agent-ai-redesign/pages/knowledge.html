@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识库 · Agent AI</title>
+    <style id="theme-vars">
+/* ============================================================
+   Agent AI 对话助手 — 精致日系立绘品牌规范
+   干净透亮的蓝白界面 × 粉发立绘：蓝粉相映、高明度、低饱和
+   prefix: agent
+   ============================================================ */
+
+:root {
+  /* ---- 品牌主色（单一主色相：晴空蓝） ---- */
+  --agent-primary-50:  #eef4ff;
+  --agent-primary-100: #dce8ff;
+  --agent-primary-200: #bfd4ff;
+  --agent-primary-300: #93b6ff;
+  --agent-primary-400: #6a97ff;
+  --agent-primary-500: #4d86ff;   /* 品牌主色 */
+  --agent-primary-600: #3b6ff6;   /* hover / 强调 */
+  --agent-primary-700: #2f59d6;
+  --agent-primary-800: #2949ab;
+  --agent-primary-900: #263f87;
+
+  /* ---- 中性墨色（偏冷的深蓝灰，不用纯黑） ---- */
+  --agent-ink-900: #141c2b;
+  --agent-ink-800: #1d2738;
+  --agent-ink-700: #2c384c;
+  --agent-ink-600: #44506a;
+  --agent-ink-500: #5f6c84;
+  --agent-ink-400: #8590a6;
+  --agent-ink-300: #aab3c5;
+  --agent-ink-200: #d3dae7;
+  --agent-ink-100: #e7ecf4;
+
+  /* ---- 语义状态色（仅用于状态，不参与品牌/分类） ---- */
+  --state-success: #18b279;
+  --state-warning: #f0a028;
+  --state-error:   #ef4d6d;
+  --state-info:    #4d86ff;
+
+  /* 角色点缀色（粉发立绘呼应，仅用于桌宠/角色相关，不做大面积品牌色） */
+  --agent-pet-pink: #f17cad;
+  --agent-pet-mint: #2fc4a8;
+
+  /* ============ 语义别名（Tailwind 桥接） ============ */
+  --agent-background:        #f6f9ff;
+  --agent-foreground:        #1d2738;
+  --agent-card:              #ffffff;
+  --agent-card-foreground:   #1d2738;
+  --agent-popover:           #ffffff;
+  --agent-popover-foreground:#1d2738;
+  --agent-primary:           #4d86ff;
+  --agent-primary-foreground:#ffffff;
+  --agent-muted:             #eef3fc;
+  --agent-muted-foreground:  #5f6c84;
+  --agent-border:            #e4ebf7;
+  --agent-input:             #d9e2f2;
+  --agent-ring:              #4d86ff;
+
+  /* 侧边栏 */
+  --agent-sidebar:                  #fbfdff;
+  --agent-sidebar-foreground:       #2c384c;
+  --agent-sidebar-primary:          #4d86ff;
+  --agent-sidebar-primary-foreground:#ffffff;
+  --agent-sidebar-accent:           #eef4ff;
+  --agent-sidebar-accent-foreground:#2f59d6;
+
+  /* ---- 圆角（克制，最大 16px） ---- */
+  --agent-radius-sm: 4px;
+  --agent-radius-md: 8px;
+  --agent-radius-lg: 16px;
+  --agent-radius-full: 9999px;
+
+  /* ---- 字体 ---- */
+  --agent-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --agent-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+  /* ---- 阴影（静态面 alpha <= 0.05；浮层可更深） ---- */
+  --agent-shadow-card: 0 1px 2px rgba(23, 43, 92, 0.04), 0 8px 24px rgba(23, 43, 92, 0.05);
+  --agent-shadow-pop:  0 12px 40px rgba(23, 43, 92, 0.14);
+  --agent-shadow-glow: 0 8px 28px rgba(77, 134, 255, 0.22);
+}
+
+/* ============ 暗色模式（预留） ============ */
+.dark {
+  --agent-background:        #0e1626;
+  --agent-foreground:        #e8eefb;
+  --agent-card:              #16203a;
+  --agent-card-foreground:   #e8eefb;
+  --agent-popover:           #16203a;
+  --agent-popover-foreground:#e8eefb;
+  --agent-primary:           #6a97ff;
+  --agent-primary-foreground:#0b1120;
+  --agent-muted:             #1d2942;
+  --agent-muted-foreground:  #93a0bd;
+  --agent-border:            #263357;
+  --agent-input:             #2f3d63;
+  --agent-ring:              #6a97ff;
+  --agent-sidebar:                  #111b30;
+  --agent-sidebar-foreground:       #c6d0e6;
+  --agent-sidebar-primary:          #6a97ff;
+  --agent-sidebar-primary-foreground:#0b1120;
+  --agent-sidebar-accent:           #1d2942;
+  --agent-sidebar-accent-foreground:#bcd2ff;
+}
+
+/* ============ 基础排版 ============ */
+html, body {
+  font-family: var(--agent-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display { font-family: var(--agent-font-display); letter-spacing: -0.01em; }
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--agent-shadow-card);
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, #2f59d6 0%, #4d86ff 45%, #6a97ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-soft-float { animation: softFloat 6s ease-in-out infinite; }
+
+</style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--agent-background);
+    --color-foreground: var(--agent-foreground);
+    --color-card: var(--agent-card);
+    --color-card-foreground: var(--agent-card-foreground);
+    --color-popover: var(--agent-popover);
+    --color-popover-foreground: var(--agent-popover-foreground);
+    --color-primary: var(--agent-primary);
+    --color-primary-foreground: var(--agent-primary-foreground);
+    --color-muted: var(--agent-muted);
+    --color-muted-foreground: var(--agent-muted-foreground);
+    --color-border: var(--agent-border);
+    --color-input: var(--agent-input);
+    --color-ring: var(--agent-ring);
+    --color-sidebar: var(--agent-sidebar);
+    --color-sidebar-foreground: var(--agent-sidebar-foreground);
+    --color-sidebar-primary: var(--agent-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--agent-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--agent-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--agent-sidebar-accent-foreground);
+    --radius-sm: var(--agent-radius-sm);
+    --radius-md: var(--agent-radius-md);
+    --radius-lg: var(--agent-radius-lg);
+  }
+  @layer base {
+    body { background: var(--agent-background); color: var(--agent-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--agent-background); }
+      .text-background { color: var(--agent-background); }
+      .border-background { border-color: var(--agent-background); }
+      .ring-background { --tw-ring-color: var(--agent-background); }
+      .bg-foreground { background-color: var(--agent-foreground); }
+      .text-foreground { color: var(--agent-foreground); }
+      .border-foreground { border-color: var(--agent-foreground); }
+      .ring-foreground { --tw-ring-color: var(--agent-foreground); }
+      .bg-card { background-color: var(--agent-card); }
+      .text-card { color: var(--agent-card); }
+      .border-card { border-color: var(--agent-card); }
+      .ring-card { --tw-ring-color: var(--agent-card); }
+      .bg-card-foreground { background-color: var(--agent-card-foreground); }
+      .text-card-foreground { color: var(--agent-card-foreground); }
+      .border-card-foreground { border-color: var(--agent-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--agent-card-foreground); }
+      .bg-popover { background-color: var(--agent-popover); }
+      .text-popover { color: var(--agent-popover); }
+      .border-popover { border-color: var(--agent-popover); }
+      .ring-popover { --tw-ring-color: var(--agent-popover); }
+      .bg-popover-foreground { background-color: var(--agent-popover-foreground); }
+      .text-popover-foreground { color: var(--agent-popover-foreground); }
+      .border-popover-foreground { border-color: var(--agent-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--agent-popover-foreground); }
+      .bg-primary { background-color: var(--agent-primary); }
+      .text-primary { color: var(--agent-primary); }
+      .border-primary { border-color: var(--agent-primary); }
+      .ring-primary { --tw-ring-color: var(--agent-primary); }
+      .bg-primary-foreground { background-color: var(--agent-primary-foreground); }
+      .text-primary-foreground { color: var(--agent-primary-foreground); }
+      .border-primary-foreground { border-color: var(--agent-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--agent-primary-foreground); }
+      .bg-muted { background-color: var(--agent-muted); }
+      .text-muted { color: var(--agent-muted); }
+      .border-muted { border-color: var(--agent-muted); }
+      .ring-muted { --tw-ring-color: var(--agent-muted); }
+      .bg-muted-foreground { background-color: var(--agent-muted-foreground); }
+      .text-muted-foreground { color: var(--agent-muted-foreground); }
+      .border-muted-foreground { border-color: var(--agent-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--agent-muted-foreground); }
+      .bg-border { background-color: var(--agent-border); }
+      .text-border { color: var(--agent-border); }
+      .border-border { border-color: var(--agent-border); }
+      .ring-border { --tw-ring-color: var(--agent-border); }
+      .bg-input { background-color: var(--agent-input); }
+      .text-input { color: var(--agent-input); }
+      .border-input { border-color: var(--agent-input); }
+      .ring-input { --tw-ring-color: var(--agent-input); }
+      .bg-ring { background-color: var(--agent-ring); }
+      .text-ring { color: var(--agent-ring); }
+      .border-ring { border-color: var(--agent-ring); }
+      .ring-ring { --tw-ring-color: var(--agent-ring); }
+      .bg-sidebar { background-color: var(--agent-sidebar); }
+      .text-sidebar { color: var(--agent-sidebar); }
+      .border-sidebar { border-color: var(--agent-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--agent-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--agent-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--agent-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--agent-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--agent-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--agent-sidebar-primary); }
+      .text-sidebar-primary { color: var(--agent-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--agent-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--agent-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--agent-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--agent-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--agent-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--agent-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--agent-sidebar-accent); }
+      .text-sidebar-accent { color: var(--agent-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--agent-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--agent-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--agent-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--agent-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--agent-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--agent-sidebar-accent-foreground); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="flex h-screen overflow-hidden bg-background text-foreground">
+      <!-- ============ 侧边栏 ============ -->
+      <aside class="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
+        <div class="flex items-center gap-2.5 px-5 py-5">
+          <img src="../assets/assistant-avatar.jpg" alt="" class="h-9 w-9 rounded-xl ring-2 ring-primary/15" />
+          <span class="font-display text-[16px] font-bold tracking-tight">Agent 助手</span>
+        </div>
+        <div class="px-3">
+          <button data-dom-id="nav-newchat" class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-medium text-primary-foreground shadow-[0_8px_20px_rgba(77,134,255,0.28)] transition-transform hover:-translate-y-0.5">
+            <i data-lucide="square-pen" class="h-4 w-4"></i> 新聊天
+          </button>
+        </div>
+        <nav class="mt-4 flex-1 space-y-1 px-3">
+          <button data-dom-id="nav-chat" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-muted">
+            <i data-lucide="message-square" class="h-[18px] w-[18px]"></i> 对话
+          </button>
+          <button data-dom-id="nav-knowledge" class="flex w-full items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-2.5 text-sm font-medium text-sidebar-accent-foreground">
+            <i data-lucide="book-open" class="h-[18px] w-[18px]"></i> 知识库
+          </button>
+          <button data-dom-id="nav-skills" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground transition-colors hover:bg-muted">
+            <i data-lucide="layout-grid" class="h-[18px] w-[18px]"></i> 技能管理
+          </button>
+        </nav>
+        <div class="border-t border-border p-3">
+          <div class="flex items-center gap-3 rounded-xl px-2 py-2">
+            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">林</div>
+            <div class="min-w-0">
+              <div class="truncate text-sm font-medium">林小枫</div>
+              <div class="truncate text-xs text-muted-foreground">@linxf</div>
+            </div>
+            <i data-lucide="log-out" class="ml-auto h-4 w-4 text-muted-foreground"></i>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ============ 主内容 ============ -->
+      <section class="flex-1 overflow-y-auto">
+        <div class="mx-auto max-w-4xl px-6 py-10">
+          <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary"><i data-lucide="book-open" class="h-5 w-5"></i></div>
+            <div>
+              <h1 class="font-display text-2xl font-bold tracking-tight">知识库</h1>
+              <p class="text-sm text-muted-foreground">上传文档，对话时 AI 可自动检索引用</p>
+            </div>
+          </div>
+
+          <!-- 上传区 -->
+          <div class="mt-8 rounded-2xl border border-dashed border-primary/40 bg-card p-10 text-center transition-colors hover:border-primary hover:bg-primary/[0.03]">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><i data-lucide="cloud-upload" class="h-7 w-7"></i></div>
+            <p class="mt-4 text-sm font-medium">点击或拖拽文本文件到此处上传</p>
+            <p class="mt-1.5 text-xs text-muted-foreground">支持 .txt / .md · 上传后自动切分、向量化</p>
+            <button class="mt-5 rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-[0_8px_20px_rgba(77,134,255,0.28)]">选择文件</button>
+          </div>
+
+          <!-- 文档列表 -->
+          <div class="mt-8 flex items-center justify-between">
+            <h2 class="font-display text-base font-semibold">我的知识库 <span class="ml-1 text-sm font-normal text-muted-foreground">（4）</span></h2>
+            <button class="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"><i data-lucide="arrow-up-down" class="h-4 w-4"></i> 排序</button>
+          </div>
+          <div class="mt-4 space-y-3">
+            <div class="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-[0_8px_24px_rgba(23,43,92,0.06)]">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="file-text" class="h-5 w-5"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2"><span class="truncate text-sm font-medium">产品需求文档 PRD v2.3.md</span><span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">md</span></div>
+                <div class="mt-1 text-xs text-muted-foreground">128 个片段 · 上传于 2026-09-05 14:22</div>
+              </div>
+              <span class="hidden items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style="color:var(--state-success);background:color-mix(in srgb,var(--state-success) 12%,transparent)"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--state-success)"></span> 已索引</span>
+              <button class="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-[color:var(--state-error)]"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+            </div>
+            <div class="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-[0_8px_24px_rgba(23,43,92,0.06)]">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="file-text" class="h-5 w-5"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2"><span class="truncate text-sm font-medium">RAG 技术方案.txt</span><span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">txt</span></div>
+                <div class="mt-1 text-xs text-muted-foreground">86 个片段 · 上传于 2026-09-04 10:05</div>
+              </div>
+              <span class="hidden items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style="color:var(--state-success);background:color-mix(in srgb,var(--state-success) 12%,transparent)"><span class="h-1.5 w-1.5 rounded-full" style="background:var(--state-success)"></span> 已索引</span>
+              <button class="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-[color:var(--state-error)]"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+            </div>
+            <div class="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-[0_8px_24px_rgba(23,43,92,0.06)]">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><i data-lucide="file-text" class="h-5 w-5"></i></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2"><span class="truncate text-sm font-medium">团队周报合集.md</span><span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">md</span></div>
+                <div class="mt-1 text-xs text-muted-foreground">214 个片段 · 上传于 2026-09-02 18:40</div>
+              </div>
+              <span class="hidden items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style="color:var(--state-warning);background:color-mix(in srgb,var(--state-warning) 12%,transparent)"><span class="h-1.5 w-1.5 animate-pulse rounded-full" style="background:var(--state-warning)"></span> 向量化中</span>
+              <button class="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-[color:var(--state-error)]"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <!-- ============ 桌宠 Desk Pet ============ -->
+    <style>
+      #desk-pet { position: fixed; z-index: 60; left: 0; top: 0; width: 118px; touch-action: none; user-select: none; -webkit-user-select: none; }
+      #desk-pet .pet-figure { position: relative; width: 118px; cursor: grab; }
+      #desk-pet.dragging .pet-figure { cursor: grabbing; }
+      #desk-pet img.pet-img {
+        width: 118px; height: auto; display: block; -webkit-user-drag: none;
+        mix-blend-mode: multiply;
+        filter: drop-shadow(0 12px 16px rgba(23, 43, 92, 0.16));
+        animation: petBob 3.6s ease-in-out infinite;
+        transform-origin: 50% 88%;
+      }
+      #desk-pet.dragging img.pet-img { animation: none; }
+      @keyframes petBob { 0%, 100% { transform: translateY(0) rotate(-1.6deg); } 50% { transform: translateY(-7px) rotate(1.6deg); } }
+
+      /* 空闲打盹 */
+      #desk-pet.pet-idle img.pet-img { animation: petDoze 4.6s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(23, 43, 92, 0.13)) saturate(0.9); }
+      @keyframes petDoze { 0%, 100% { transform: translateY(1px) rotate(-3.2deg) scale(0.985); } 50% { transform: translateY(-2px) rotate(3.2deg) scale(0.985); } }
+      #pet-zzz { position: absolute; top: -10px; right: -6px; width: 30px; height: 34px; display: none; pointer-events: none; }
+      #desk-pet.pet-idle #pet-zzz { display: block; }
+      #pet-zzz span {
+        position: absolute; left: 0; bottom: 0; font-weight: 800; color: var(--agent-primary);
+        opacity: 0; animation: zzzFloat 2.7s ease-in-out infinite; text-shadow: 0 1px 2px rgba(255,255,255,0.9);
+      }
+      #pet-zzz span:nth-child(1) { font-size: 11px; animation-delay: 0s; }
+      #pet-zzz span:nth-child(2) { font-size: 14px; left: 8px; animation-delay: 0.9s; }
+      #pet-zzz span:nth-child(3) { font-size: 17px; left: 15px; animation-delay: 1.8s; }
+      @keyframes zzzFloat { 0% { opacity: 0; transform: translateY(7px) scale(0.6); } 30% { opacity: 0.95; } 100% { opacity: 0; transform: translateY(-20px) translateX(7px) scale(1.1); } }
+
+      /* 摸摸头反应 */
+      #desk-pet.patting img.pet-img { animation: patBounce 0.55s ease; }
+      @keyframes patBounce {
+        0% { transform: scale(1, 1); }
+        30% { transform: scale(1.09, 0.88) translateY(5px); }
+        55% { transform: scale(0.95, 1.06) translateY(-4px); }
+        100% { transform: scale(1, 1); }
+      }
+      .pet-fx { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+      .pet-spark { position: absolute; pointer-events: none; animation: sparkFly 0.95s ease-out forwards; }
+      .pet-spark svg { width: 16px; height: 16px; display: block; }
+      @keyframes sparkFly {
+        0% { opacity: 0; transform: translateY(4px) scale(0.4) rotate(0deg); }
+        25% { opacity: 1; }
+        100% { opacity: 0; transform: translateY(-34px) scale(1.15) rotate(28deg); }
+      }
+
+      #pet-bubble { transition: opacity .3s ease, transform .3s ease; width: 240px; margin-left: -61px; }
+      #pet-bubble.show { opacity: 1 !important; transform: translateY(0) !important; pointer-events: auto; }
+      #pet-bubble::after {
+        content: ''; position: absolute; bottom: -6px; left: 50%;
+        transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px;
+        background: var(--agent-card);
+        border-right: 1px solid var(--agent-border);
+        border-bottom: 1px solid var(--agent-border);
+      }
+      #pet-mode {
+        position: absolute; top: 2px; right: -8px; z-index: 2;
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 8px; border-radius: 9999px;
+        font-size: 10px; line-height: 1; font-weight: 600; white-space: nowrap;
+        background: var(--agent-card); border: 1px solid var(--agent-border);
+        color: var(--agent-primary-700);
+        box-shadow: 0 4px 10px rgba(23, 43, 92, 0.08);
+      }
+      #pet-mode .dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--agent-pet-mint); }
+      #desk-pet:not(.follow-on) #pet-mode .dot { background: var(--agent-ink-300); }
+    </style>
+    <div id="desk-pet" class="follow-on">
+      <div id="pet-bubble" class="glass-card relative mb-2 rounded-2xl px-4 py-3 text-[13px] leading-6 text-foreground opacity-0 translate-y-2 pointer-events-none">
+        <span id="pet-bubble-text">嗨～我是你的小助手！</span>
+      </div>
+      <div class="pet-figure" id="pet-figure" title="拖拽移动 · 单击摸摸头 · 双击切换跟随">
+        <span id="pet-mode"><span class="dot"></span><span id="pet-mode-text">跟随中</span></span>
+        <div class="pet-fx" id="pet-fx"></div>
+        <div id="pet-zzz" aria-hidden="true"><span>z</span><span>Z</span><span>Z</span></div>
+        <img class="pet-img" src="../assets/pet-mascot.jpg" alt="桌宠小助手" draggable="false" />
+      </div>
+    </div>
+    <script>
+    (function () {
+      var pet = document.getElementById('desk-pet');
+      if (!pet) return;
+      var fig = document.getElementById('pet-figure');
+      var bubble = document.getElementById('pet-bubble');
+      var text = document.getElementById('pet-bubble-text');
+      var modeText = document.getElementById('pet-mode-text');
+      var fx = document.getElementById('pet-fx');
+
+      var W = 118;
+      var IDLE_MS = 20000;
+      var lines = [
+        '嗨～今天也要元气满满哦！',
+        '有什么想问的，尽管戳我啦～',
+        '啦啦啦～我就在这儿陪着你',
+        '写累了？喝口水再继续嘛',
+        '双击我可以开关「跟随鼠标」哦',
+        '按住拖一拖，把我放到喜欢的位置',
+        '知识库和技能都备好啦，随时开工！',
+        '嘿嘿，被你发现啦',
+        '今天的你也超厉害的！'
+      ];
+      var patLines = ['嘿嘿，摸摸头好舒服～', '再多摸一下嘛', '开心！给你比个心', '哇，被宠爱了呢', '最喜欢和你待在一起啦'];
+      var wakeLines = ['唔…我刚刚打了个小盹儿', '你回来啦！我还以为你走丢了呢', '呼…睡饱啦，继续加油！', '啊呜…被你叫醒啦～'];
+      var HEART = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+      var STAR = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.3L20 10l-6.1 1.7L12 18l-1.9-6.3L4 10l6.1-1.7z"/></svg>';
+
+      var follow = true;
+      var timer = null;
+      var lastActive = Date.now();
+
+      function petH() { return pet.offsetHeight || 280; }
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      var pos = { x: window.innerWidth - W - 26, y: window.innerHeight - petH() - 14 };
+      function apply() { pet.style.left = pos.x + 'px'; pet.style.top = pos.y + 'px'; }
+      apply();
+
+      function showBubble(msg, hold) {
+        text.textContent = msg || lines[Math.floor(Math.random() * lines.length)];
+        bubble.classList.add('show');
+        clearTimeout(timer);
+        timer = setTimeout(function () { bubble.classList.remove('show'); }, hold || 4200);
+      }
+      function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+      function spawnSparkles() {
+        for (var i = 0; i < 4; i++) {
+          var s = document.createElement('span');
+          var heart = (i % 2 === 0);
+          s.className = 'pet-spark';
+          s.innerHTML = heart ? HEART : STAR;
+          s.style.color = heart ? 'var(--agent-pet-pink)' : 'var(--agent-primary)';
+          s.style.left = (26 + Math.random() * 62) + 'px';
+          s.style.top = (14 + Math.random() * 30) + 'px';
+          s.style.animationDelay = (Math.random() * 0.12) + 's';
+          fx.appendChild(s);
+          (function (el) { setTimeout(function () { el.remove(); }, 1050); })(s);
+        }
+      }
+
+      function pat() {
+        var wasIdle = pet.classList.contains('pet-idle');
+        lastActive = Date.now();
+        pet.classList.remove('pet-idle');
+        spawnSparkles();
+        pet.classList.remove('patting'); void pet.offsetWidth; pet.classList.add('patting');
+        setTimeout(function () { pet.classList.remove('patting'); }, 620);
+        showBubble(wasIdle ? pick(wakeLines) : (Math.random() < 0.55 ? pick(patLines) : pick(lines)));
+      }
+
+      var dragging = false, moved = 0, sx = 0, sy = 0, ox = 0, oy = 0;
+      fig.addEventListener('pointerdown', function (e) {
+        dragging = true; moved = 0; lastActive = Date.now();
+        pet.classList.remove('pet-idle');
+        pet.classList.add('dragging');
+        sx = e.clientX; sy = e.clientY;
+        ox = pos.x - e.clientX; oy = pos.y - e.clientY;
+        try { fig.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+      fig.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        moved = Math.max(moved, Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy));
+        pos.x = clamp(e.clientX + ox, 8, window.innerWidth - W - 8);
+        pos.y = clamp(e.clientY + oy, 8, window.innerHeight - petH() - 8);
+        apply();
+      });
+      function endDrag() {
+        if (!dragging) return;
+        dragging = false;
+        pet.classList.remove('dragging');
+        lastActive = Date.now();
+        if (moved < 8) pat();
+      }
+      fig.addEventListener('pointerup', endDrag);
+      fig.addEventListener('pointercancel', endDrag);
+      fig.addEventListener('dblclick', function () {
+        lastActive = Date.now();
+        follow = !follow;
+        pet.classList.toggle('follow-on', follow);
+        pet.classList.remove('pet-idle');
+        modeText.textContent = follow ? '跟随中' : '已停靠';
+        showBubble(follow ? '好呀～我跟着鼠标走啦！' : '收到！那我在这儿乖乖等你', 3200);
+      });
+
+      var mouse = { x: pos.x, y: pos.y };
+      window.addEventListener('mousemove', function (e) {
+        mouse.x = e.clientX; mouse.y = e.clientY;
+        lastActive = Date.now();
+      }, { passive: true });
+      window.addEventListener('keydown', function () { lastActive = Date.now(); }, { passive: true });
+
+      function loop() {
+        if (!dragging) {
+          if (Date.now() - lastActive > IDLE_MS) pet.classList.add('pet-idle');
+          else pet.classList.remove('pet-idle');
+          if (follow) {
+            var tx = clamp(mouse.x + 26, 8, window.innerWidth - W - 8);
+            var ty = clamp(mouse.y + 30, 8, window.innerHeight - petH() - 8);
+            pos.x += (tx - pos.x) * 0.045;
+            pos.y += (ty - pos.y) * 0.045;
+            apply();
+          }
+        }
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+
+      window.addEventListener('resize', function () {
+        pos.x = clamp(pos.x, 8, window.innerWidth - W - 8);
+        pos.y = clamp(pos.y, 8, window.innerHeight - petH() - 8);
+        apply();
+      });
+
+      setTimeout(function () {
+        showBubble('嗨～我是你的小助手！拖一拖可以移动，双击切换跟随，不理我我会偷偷打盹哦', 5600);
+      }, 1200);
+    })();
+    </script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

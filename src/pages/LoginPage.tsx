@@ -3,6 +3,7 @@ import { Button, Card, Form, Input, Tabs, Typography, App as AntdApp } from 'ant
 import { LockOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import characterSplash from '../assets/character-splash.jpg'
 
 interface LoginFormValues {
   username: string
@@ -35,7 +36,17 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <Card className="auth-card" variant="borderless">
+      {/* 左侧品牌立绘 */}
+      <div className="auth-hero">
+        <div className="auth-hero-glow" />
+        <div className="auth-hero-figure">
+          <img src={characterSplash} alt="Agent AI 助手" />
+        </div>
+      </div>
+
+      {/* 右侧登录表单 */}
+      <div className="auth-panel">
+        <Card className="auth-card" variant="borderless">
         <div className="auth-brand">
           <div className="auth-logo">
             <RobotOutlined />
@@ -115,7 +126,8 @@ export default function LoginPage() {
             },
           ]}
         />
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

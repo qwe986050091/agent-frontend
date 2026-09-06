@@ -7,28 +7,33 @@
 
 ## P0 — 生产硬伤（建议最先处理）
 
-- [ ] **1. 移除硬编码的 LLM API Key**
-  - 位置：`agent/src/main/resources/application.yml` 第 16 行 `${OPENAI_API_KEY:sk-...}` 默认值
-  - 动作：作废已泄露的 DeepSeek key → 移除配置中的默认值（仅保留环境变量注入）→ 排查/清理 git 历史中的 key
-  - 验收：代码与 jar 中 grep 不到任何 `sk-` 开头的密钥
+- [x] **1. 移除硬编码的密钥默认值** ✅ 2026-09-06 完成
+  - ~~位置：`agent/src/main/resources/application.yml` 的 `${OPENAI_API_KEY:sk-...}` 默认值；backend yml 的 `${MYSQL_PASSWORD:wasdqew123}`~~
+  - 已落地：agent yml `api-key: ${OPENAI_API_KEY:}`（无明文默认值）+ `AgentConfig.requireApiKey()` 启动 fail-fast（缺 key 启动即失败并给出 systemd/本地注入指引，本地已验证）；backend yml `password: ${MYSQL_PASSWORD:}`（缺失时 Hikari 启动即失败）；deploy-test 脚本中的 MySQL 密码改为从 unit 读取/环境变量，不留明文；两个 fat jar 内 application.yml 已验证 grep 不到 `sk-`/密码明文
+  - 线上：unit 早已注入 OPENAI_API_KEY / MYSQL_USER / MYSQL_PASSWORD，部署后两服务 active、对话 200，无影响
+  - 用户决策（2026-09-06）：git 历史与旧 jar 中的历史 key/密码**不轮换**（私有仓库，评估无泄露风险）；如未来改主意，需在 DeepSeek 控制台作废旧 key、MySQL 改密并更新两个 systemd unit 后 `daemon-reload && restart`
 
-- [ ] **2. agent 服务（8080）增加内部鉴权**
-  - 现状：`AgentController` 全部接口（聊天/技能上传/挂载/RAG 索引）零认证，backend 调用也不带凭证
-  - 动作：agent 侧加拦截器校验内部 token（请求头），backend 的 `AgentClient` 统一注入该 token；或上 mTLS
-  - 验收：无 token 直连 8080 任意接口返回 401；backend 正常调用不受影响
+- [x] **2. agent 服务（8080）增加内部鉴权** ✅ 2026-09-06 完成
+  - ~~现状：`AgentController` 全部接口零认证，backend 调用也不带凭证~~
+  - 已落地：agent 新增 `InternalTokenInterceptor`（拦截 /api/agent/**，校验请求头 `X-Agent-Token`，恒定时间比较；GET /api/agent/health 探活放行；token 未配置则拒绝全部受保护接口）+ `WebConfig` 注册；backend `AgentClient` 经 RestClient 请求拦截器对所有调用（含 SSE/RAG）统一注入 token；token 由环境变量 `AGENT_INTERNAL_TOKEN` 注入（生产 systemd 两个 unit 已配同一强随机值，本地默认 dev-internal-token）；熔断器 ignore 4xx（401 配置错误不顶开熔断）
+  - 验收（线上实测）：无 token / 错误 token 直连 8080 的 chat/tools/rag 均 401 且有 WARN 审计日志；health 无 token 200；正确 token 200；经 backend 的同步对话/SSE/技能挂载/工具调用全部 200
+  - 部署教训：打包必须用 `mvnw clean package`——IDE（jdt.ls）增量编译器会把带"Unresolved compilation problems"的错误 class 写进 target/classes，Maven 增量打包跳过重编译直接打入 jar，导致线上 NoClassDefFoundError 崩溃循环（javap 常量池可见简单名签名）
 
-- [ ] **3. 有状态服务无状态化（记忆 / 技能挂载外置）**
-  - 现状：`AgentFactory.memoryStore`（短期上下文+摘要）、`SkillManager.skillRegistry/userSkillMounts` 均为 JVM 内存态；agent 重启后摘要与最近上下文丢失，多实例间状态不共享
-  - 动作：以 backend + DB/Redis 为唯一事实源；agent 启动/请求时按 userId（或 conversationId）加载记忆，技能挂载关系从 backend 获取；内存态仅作缓存
-  - 验收：agent 重启后对话上下文不丢失（从存储恢复）；双实例挂载/记忆一致
+- [x] **3. 有状态服务无状态化（记忆 / 技能挂载外置）** ✅ 2026-09-06 完成
+  - ~~现状：`AgentFactory.memoryStore`（短期上下文+摘要）、`SkillManager.skillRegistry/userSkillMounts` 均为 JVM 内存态；agent 重启后摘要与最近上下文丢失，多实例间状态不共享~~
+  - 已落地：
+    - agent 侧：`AgentFactory` 移除 `memoryStore`，每次请求按 payload（摘要+近 30 条历史+技能定义）构建请求级记忆/Skill；`SkillManager` 精简为内置技能目录 + 请求级 `resolveSkills()`；`SummarizingChatMemory.restore()` 支持状态重建、`summaryText()` 导出摘要，且压缩时旧摘要合并（不再堆叠）；对话协议新增 `history/summary/skills` 入参，SSE 结束前发 `event: memory` 回传摘要；删除 agent 的技能上传/挂载等状态接口
+    - backend 侧：新增 `agent_memory` 表（摘要持久化）；`ChatController` 每次请求从 MySQL 组装状态下发、回合后回写摘要；技能上传/挂载/卸载/删除不再调 agent（MySQL 唯一权威）；`SkillSyncService` 精简为仅内置元数据落库；`AgentClient` 切换为无状态协议并解析 memory 事件
+  - 验收：agent 重启后摘要从 `agent_memory` 恢复、近期历史从 `chat_message` 重建（近 30 条）；技能挂载/上传即时生效，agent 重启无丢失、多实例一致
+  - 备注：RAG 向量库仍为 InMemory + JSON 快照（多实例不共享），属 P1-9 真向量库范畴；多会话（conversationId）属 P1-8
 
-- [ ] **4. 资源边界与容错**
-  - [ ] 4.1 线程池治理：backend `ChatController` 与 agent `AgentController` 的 `newCachedThreadPool` 改为有界线程池（核心/最大线程、队列上限、拒绝策略）
-  - [ ] 4.2 SSE 超时：`SseEmitter(0L)` 改为合理超时 + 断连清理
-  - [ ] 4.3 HTTP 客户端：`AgentClient` 的 `SimpleClientHttpRequestFactory` 换带连接池的实现（如 JDK HttpClient / OkHttp）
-  - [ ] 4.4 韧性：agent 调用增加重试 + 熔断（Resilience4j），故障不传导给用户
-  - [ ] 4.5 内存治理：`memoryStore` 空闲记忆淘汰策略；向量库容量监控
-  - 验收：压测下线程/连接数有上限；agent 宕机时 backend 返回友好降级响应而非 500
+- [x] **4. 资源边界与容错** ✅ 2026-09-06 完成（4.1-4.4）
+  - [x] 4.1 线程池治理：backend `ChatController`（8/32/队列200）与 agent `AgentController`（8/24/队列100）改为有界 `ThreadPoolExecutor` + AbortPolicy（满载 503 快速失败）+ 命名线程 + `@PreDestroy` 关闭
+  - [x] 4.2 SSE 超时：两端 `SseEmitter` 改 5 分钟超时 + `onTimeout` 主动 completeWithError，队列满拒绝时返回 503
+  - [x] 4.3 HTTP 客户端：`AgentClient` 换 JDK `HttpClient`（HTTP/2 连接池 + 8 线程响应池）+ `JdkClientHttpRequestFactory`
+  - [x] 4.4 韧性：Resilience4j 熔断（20 次窗口/50% 失败率/OPEN 30s/半开 3 次探测，慢调用不计熔断、4xx 不计失败）+ 重试（2 次尝试/间隔 1s，仅连接失败·读超时·5xx）；同步对话 CB(retry(...)) 包装、SSE 仅熔断、RAG 仅熔断；熔断打开/调用失败返回 503 友好提示；状态变更与重试有日志
+  - [x] 4.5 内存治理：`memoryStore` 已随 P0-3 无状态化消除（记忆请求级重建）；向量库容量监控并入 P1-9
+  - 验收：压测下线程/连接数有上限（待压测实测）；agent 宕机/熔断时 backend 返回 503 + AGENT_UNAVAILABLE 友好降级而非裸 500
 
 - [ ] **5. 认证体系加固**
   - 现状：token 为 DB 单值 UUID，无过期、无 refresh、单端登录互踢、无限流

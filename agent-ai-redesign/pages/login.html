@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 · Agent AI</title>
+    <style id="theme-vars">
+/* ============================================================
+   Agent AI 对话助手 — 精致日系立绘品牌规范
+   干净透亮的蓝白界面 × 粉发立绘：蓝粉相映、高明度、低饱和
+   prefix: agent
+   ============================================================ */
+
+:root {
+  /* ---- 品牌主色（单一主色相：晴空蓝） ---- */
+  --agent-primary-50:  #eef4ff;
+  --agent-primary-100: #dce8ff;
+  --agent-primary-200: #bfd4ff;
+  --agent-primary-300: #93b6ff;
+  --agent-primary-400: #6a97ff;
+  --agent-primary-500: #4d86ff;   /* 品牌主色 */
+  --agent-primary-600: #3b6ff6;   /* hover / 强调 */
+  --agent-primary-700: #2f59d6;
+  --agent-primary-800: #2949ab;
+  --agent-primary-900: #263f87;
+
+  /* ---- 中性墨色（偏冷的深蓝灰，不用纯黑） ---- */
+  --agent-ink-900: #141c2b;
+  --agent-ink-800: #1d2738;
+  --agent-ink-700: #2c384c;
+  --agent-ink-600: #44506a;
+  --agent-ink-500: #5f6c84;
+  --agent-ink-400: #8590a6;
+  --agent-ink-300: #aab3c5;
+  --agent-ink-200: #d3dae7;
+  --agent-ink-100: #e7ecf4;
+
+  /* ---- 语义状态色（仅用于状态，不参与品牌/分类） ---- */
+  --state-success: #18b279;
+  --state-warning: #f0a028;
+  --state-error:   #ef4d6d;
+  --state-info:    #4d86ff;
+
+  /* 角色点缀色（粉发立绘呼应，仅用于桌宠/角色相关，不做大面积品牌色） */
+  --agent-pet-pink: #f17cad;
+  --agent-pet-mint: #2fc4a8;
+
+  /* ============ 语义别名（Tailwind 桥接） ============ */
+  --agent-background:        #f6f9ff;
+  --agent-foreground:        #1d2738;
+  --agent-card:              #ffffff;
+  --agent-card-foreground:   #1d2738;
+  --agent-popover:           #ffffff;
+  --agent-popover-foreground:#1d2738;
+  --agent-primary:           #4d86ff;
+  --agent-primary-foreground:#ffffff;
+  --agent-muted:             #eef3fc;
+  --agent-muted-foreground:  #5f6c84;
+  --agent-border:            #e4ebf7;
+  --agent-input:             #d9e2f2;
+  --agent-ring:              #4d86ff;
+
+  /* 侧边栏 */
+  --agent-sidebar:                  #fbfdff;
+  --agent-sidebar-foreground:       #2c384c;
+  --agent-sidebar-primary:          #4d86ff;
+  --agent-sidebar-primary-foreground:#ffffff;
+  --agent-sidebar-accent:           #eef4ff;
+  --agent-sidebar-accent-foreground:#2f59d6;
+
+  /* ---- 圆角（克制，最大 16px） ---- */
+  --agent-radius-sm: 4px;
+  --agent-radius-md: 8px;
+  --agent-radius-lg: 16px;
+  --agent-radius-full: 9999px;
+
+  /* ---- 字体 ---- */
+  --agent-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --agent-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+  /* ---- 阴影（静态面 alpha <= 0.05；浮层可更深） ---- */
+  --agent-shadow-card: 0 1px 2px rgba(23, 43, 92, 0.04), 0 8px 24px rgba(23, 43, 92, 0.05);
+  --agent-shadow-pop:  0 12px 40px rgba(23, 43, 92, 0.14);
+  --agent-shadow-glow: 0 8px 28px rgba(77, 134, 255, 0.22);
+}
+
+/* ============ 暗色模式（预留） ============ */
+.dark {
+  --agent-background:        #0e1626;
+  --agent-foreground:        #e8eefb;
+  --agent-card:              #16203a;
+  --agent-card-foreground:   #e8eefb;
+  --agent-popover:           #16203a;
+  --agent-popover-foreground:#e8eefb;
+  --agent-primary:           #6a97ff;
+  --agent-primary-foreground:#0b1120;
+  --agent-muted:             #1d2942;
+  --agent-muted-foreground:  #93a0bd;
+  --agent-border:            #263357;
+  --agent-input:             #2f3d63;
+  --agent-ring:              #6a97ff;
+  --agent-sidebar:                  #111b30;
+  --agent-sidebar-foreground:       #c6d0e6;
+  --agent-sidebar-primary:          #6a97ff;
+  --agent-sidebar-primary-foreground:#0b1120;
+  --agent-sidebar-accent:           #1d2942;
+  --agent-sidebar-accent-foreground:#bcd2ff;
+}
+
+/* ============ 基础排版 ============ */
+html, body {
+  font-family: var(--agent-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.font-display { font-family: var(--agent-font-display); letter-spacing: -0.01em; }
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--agent-shadow-card);
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, #2f59d6 0%, #4d86ff 45%, #6a97ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-soft-float { animation: softFloat 6s ease-in-out infinite; }
+
+/* ============ 桌宠 Desk Pet ============ */
+@keyframes petFloat {
+  0%, 100% { transform: translateY(0) rotate(-1.6deg); }
+  50%      { transform: translateY(-9px) rotate(1.6deg); }
+}
+.animate-pet-float { animation: petFloat 3.8s ease-in-out infinite; }
+
+@keyframes petHalo {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.1); }
+}
+.pet-halo {
+  background: radial-gradient(circle, rgba(77,134,255,0.32) 0%, rgba(241,124,173,0.18) 45%, transparent 70%);
+  animation: petHalo 3.8s ease-in-out infinite;
+}
+
+@keyframes petShadow {
+  0%, 100% { transform: scaleX(1);    opacity: .5; }
+  50%      { transform: scaleX(0.8);  opacity: .3; }
+}
+.pet-shadow {
+  background: radial-gradient(ellipse, rgba(23,43,92,0.22), transparent 70%);
+  animation: petShadow 3.8s ease-in-out infinite;
+}
+
+#pet-bubble { transition: opacity .32s ease, transform .32s ease; }
+#pet-bubble.show { opacity: 1 !important; transform: translateY(0) !important; pointer-events: auto; }
+#pet-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px; height: 12px;
+  background: var(--agent-card);
+  border-right: 1px solid var(--agent-border);
+  border-bottom: 1px solid var(--agent-border);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--agent-background);
+    --color-foreground: var(--agent-foreground);
+    --color-card: var(--agent-card);
+    --color-card-foreground: var(--agent-card-foreground);
+    --color-popover: var(--agent-popover);
+    --color-popover-foreground: var(--agent-popover-foreground);
+    --color-primary: var(--agent-primary);
+    --color-primary-foreground: var(--agent-primary-foreground);
+    --color-muted: var(--agent-muted);
+    --color-muted-foreground: var(--agent-muted-foreground);
+    --color-border: var(--agent-border);
+    --color-input: var(--agent-input);
+    --color-ring: var(--agent-ring);
+    --color-sidebar: var(--agent-sidebar);
+    --color-sidebar-foreground: var(--agent-sidebar-foreground);
+    --color-sidebar-primary: var(--agent-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--agent-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--agent-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--agent-sidebar-accent-foreground);
+    --radius-sm: var(--agent-radius-sm);
+    --radius-md: var(--agent-radius-md);
+    --radius-lg: var(--agent-radius-lg);
+  }
+  @layer base {
+    body { background: var(--agent-background); color: var(--agent-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--agent-background); }
+      .text-background { color: var(--agent-background); }
+      .border-background { border-color: var(--agent-background); }
+      .ring-background { --tw-ring-color: var(--agent-background); }
+      .bg-foreground { background-color: var(--agent-foreground); }
+      .text-foreground { color: var(--agent-foreground); }
+      .border-foreground { border-color: var(--agent-foreground); }
+      .ring-foreground { --tw-ring-color: var(--agent-foreground); }
+      .bg-card { background-color: var(--agent-card); }
+      .text-card { color: var(--agent-card); }
+      .border-card { border-color: var(--agent-card); }
+      .ring-card { --tw-ring-color: var(--agent-card); }
+      .bg-card-foreground { background-color: var(--agent-card-foreground); }
+      .text-card-foreground { color: var(--agent-card-foreground); }
+      .border-card-foreground { border-color: var(--agent-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--agent-card-foreground); }
+      .bg-popover { background-color: var(--agent-popover); }
+      .text-popover { color: var(--agent-popover); }
+      .border-popover { border-color: var(--agent-popover); }
+      .ring-popover { --tw-ring-color: var(--agent-popover); }
+      .bg-popover-foreground { background-color: var(--agent-popover-foreground); }
+      .text-popover-foreground { color: var(--agent-popover-foreground); }
+      .border-popover-foreground { border-color: var(--agent-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--agent-popover-foreground); }
+      .bg-primary { background-color: var(--agent-primary); }
+      .text-primary { color: var(--agent-primary); }
+      .border-primary { border-color: var(--agent-primary); }
+      .ring-primary { --tw-ring-color: var(--agent-primary); }
+      .bg-primary-foreground { background-color: var(--agent-primary-foreground); }
+      .text-primary-foreground { color: var(--agent-primary-foreground); }
+      .border-primary-foreground { border-color: var(--agent-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--agent-primary-foreground); }
+      .bg-muted { background-color: var(--agent-muted); }
+      .text-muted { color: var(--agent-muted); }
+      .border-muted { border-color: var(--agent-muted); }
+      .ring-muted { --tw-ring-color: var(--agent-muted); }
+      .bg-muted-foreground { background-color: var(--agent-muted-foreground); }
+      .text-muted-foreground { color: var(--agent-muted-foreground); }
+      .border-muted-foreground { border-color: var(--agent-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--agent-muted-foreground); }
+      .bg-border { background-color: var(--agent-border); }
+      .text-border { color: var(--agent-border); }
+      .border-border { border-color: var(--agent-border); }
+      .ring-border { --tw-ring-color: var(--agent-border); }
+      .bg-input { background-color: var(--agent-input); }
+      .text-input { color: var(--agent-input); }
+      .border-input { border-color: var(--agent-input); }
+      .ring-input { --tw-ring-color: var(--agent-input); }
+      .bg-ring { background-color: var(--agent-ring); }
+      .text-ring { color: var(--agent-ring); }
+      .border-ring { border-color: var(--agent-ring); }
+      .ring-ring { --tw-ring-color: var(--agent-ring); }
+      .bg-sidebar { background-color: var(--agent-sidebar); }
+      .text-sidebar { color: var(--agent-sidebar); }
+      .border-sidebar { border-color: var(--agent-sidebar); }
+      .ring-sidebar { --tw-ring-color: var(--agent-sidebar); }
+      .bg-sidebar-foreground { background-color: var(--agent-sidebar-foreground); }
+      .text-sidebar-foreground { color: var(--agent-sidebar-foreground); }
+      .border-sidebar-foreground { border-color: var(--agent-sidebar-foreground); }
+      .ring-sidebar-foreground { --tw-ring-color: var(--agent-sidebar-foreground); }
+      .bg-sidebar-primary { background-color: var(--agent-sidebar-primary); }
+      .text-sidebar-primary { color: var(--agent-sidebar-primary); }
+      .border-sidebar-primary { border-color: var(--agent-sidebar-primary); }
+      .ring-sidebar-primary { --tw-ring-color: var(--agent-sidebar-primary); }
+      .bg-sidebar-primary-foreground { background-color: var(--agent-sidebar-primary-foreground); }
+      .text-sidebar-primary-foreground { color: var(--agent-sidebar-primary-foreground); }
+      .border-sidebar-primary-foreground { border-color: var(--agent-sidebar-primary-foreground); }
+      .ring-sidebar-primary-foreground { --tw-ring-color: var(--agent-sidebar-primary-foreground); }
+      .bg-sidebar-accent { background-color: var(--agent-sidebar-accent); }
+      .text-sidebar-accent { color: var(--agent-sidebar-accent); }
+      .border-sidebar-accent { border-color: var(--agent-sidebar-accent); }
+      .ring-sidebar-accent { --tw-ring-color: var(--agent-sidebar-accent); }
+      .bg-sidebar-accent-foreground { background-color: var(--agent-sidebar-accent-foreground); }
+      .text-sidebar-accent-foreground { color: var(--agent-sidebar-accent-foreground); }
+      .border-sidebar-accent-foreground { border-color: var(--agent-sidebar-accent-foreground); }
+      .ring-sidebar-accent-foreground { --tw-ring-color: var(--agent-sidebar-accent-foreground); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="min-h-screen bg-background text-foreground">
+      <div class="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+        <!-- ============ 左侧：品牌 + 表单 ============ -->
+        <div class="relative flex flex-col justify-center px-8 py-12 sm:px-14 lg:px-20">
+          <div class="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl"></div>
+          <div class="relative mx-auto w-full max-w-sm">
+            <div class="flex items-center gap-3">
+              <img src="../assets/assistant-avatar.jpg" alt="Agent AI" class="h-12 w-12 rounded-2xl ring-2 ring-primary/20" />
+              <div>
+                <div class="font-display text-lg font-bold tracking-tight">Agent AI 对话助手</div>
+                <div class="text-xs text-muted-foreground">你的智能工作伙伴</div>
+              </div>
+            </div>
+
+            <h1 class="mt-10 font-display text-3xl font-bold tracking-tight">欢迎回来 👋</h1>
+            <p class="mt-2 text-sm text-muted-foreground">登录后开始与你的智能助手对话</p>
+
+            <!-- 选项卡 -->
+            <div class="mt-8 grid grid-cols-2 gap-1 rounded-full bg-muted p-1 text-sm font-medium">
+              <button class="rounded-full bg-card py-2 text-foreground shadow-sm">登录</button>
+              <button class="py-2 text-muted-foreground transition-colors hover:text-foreground">注册</button>
+            </div>
+
+            <form class="mt-7 space-y-4" onsubmit="return false">
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-foreground">用户名</label>
+                <div class="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                  <i data-lucide="user" class="h-4 w-4 text-muted-foreground"></i>
+                  <input class="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70" placeholder="请输入用户名" />
+                </div>
+              </div>
+              <div>
+                <label class="mb-1.5 block text-sm font-medium text-foreground">密码</label>
+                <div class="flex items-center gap-2.5 rounded-xl border border-border bg-card px-4 py-3 transition-colors focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                  <i data-lucide="lock" class="h-4 w-4 text-muted-foreground"></i>
+                  <input type="password" class="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70" placeholder="请输入密码" />
+                  <i data-lucide="eye" class="h-4 w-4 text-muted-foreground"></i>
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <label class="flex items-center gap-2 text-muted-foreground"><span class="h-4 w-4 rounded border border-input bg-card"></span> 记住我</label>
+                <a class="text-primary hover:underline">忘记密码？</a>
+              </div>
+              <button data-dom-id="login-submit" class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[0_10px_26px_rgba(77,134,255,0.32)] transition-transform hover:-translate-y-0.5">
+                登 录
+              </button>
+            </form>
+            <p class="mt-6 text-center text-xs text-muted-foreground">继续即表示同意《服务条款》与《隐私政策》</p>
+          </div>
+        </div>
+
+        <!-- ============ 右侧：立绘主视觉 ============ -->
+        <div class="relative hidden overflow-hidden lg:block">
+          <div class="absolute inset-0 bg-gradient-to-br from-primary/15 via-background to-primary/5"></div>
+          <div class="pointer-events-none absolute right-10 top-16 h-80 w-80 rounded-full bg-primary/20 blur-3xl"></div>
+          <img src="../assets/character-splash.jpg" alt="Agent AI 立绘" class="absolute inset-0 h-full w-full object-cover object-top" />
+          <div class="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-background/90 to-transparent"></div>
+          <div class="absolute bottom-12 left-12 right-12">
+            <div class="glass-card rounded-2xl p-5">
+              <div class="flex items-center gap-2 text-primary"><i data-lucide="sparkles" class="h-4 w-4"></i><span class="text-xs font-semibold uppercase tracking-wider">AI Assistant</span></div>
+              <p class="mt-2 font-display text-lg font-semibold leading-snug">“把繁琐交给我，<br />你专注于真正重要的事。”</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

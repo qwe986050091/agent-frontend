@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons'
 import { api, streamChat } from '../api'
 import { useAuth } from '../auth'
+import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 const { TextArea } = Input
 
@@ -179,9 +180,13 @@ export default function ChatPage() {
     return (
       <div className="chat-page chat-page--welcome">
         <div className="chat-welcome">
+          <div className="chat-welcome-hero">
+            <img src={assistantAvatar} alt="AI 助手" />
+          </div>
           <h1 className="chat-greeting">
             {greetingOf()}，{displayName}
           </h1>
+          <p className="chat-welcome-sub">温柔而高效地和你对话，写东西、查资料都可以交给我</p>
           {composer}
         </div>
       </div>
@@ -206,15 +211,18 @@ export default function ChatPage() {
             }
             return (
               <div key={i} className="chat-row assistant">
+                <img className="chat-avatar" src={assistantAvatar} alt="助手" />
                 {streaming && !m.content ? (
                   <span className="chat-thinking">
                     <LoadingOutlined /> 思考中...
                   </span>
                 ) : (
-                  <pre className="chat-text">
-                    {m.content}
-                    {streaming ? <span className="chat-cursor" /> : null}
-                  </pre>
+                  <div className="chat-bubble-assistant">
+                    <pre className="chat-text">
+                      {m.content}
+                      {streaming ? <span className="chat-cursor" /> : null}
+                    </pre>
+                  </div>
                 )}
               </div>
             )

@@ -1,0 +1,26 @@
+{
+  "skill": "solo-graphic-generation",
+  "skillVersion": "2026.08.06.21.24.57",
+  "versionSource": "skill-release-manifest.json",
+  "projectName": "Agent AI 二次元品牌图片素材包",
+  "styleDirection": "日系二次元 chibi 插画风，统一蓝发 AI 少女 Mascot（蓝色短发、蓝色大眼、发光蓝色呆毛天线、白蓝科技感连帽衫），主色 #4d86ff，浅蓝到白渐变背景，治愈系新海诚式天空光影",
+  "sizeConfirmation": {
+    "requestedVerbatim": "按用途适配（用户选择 Recommended 选项）",
+    "rule": "图标/头像/插画用 1:1 方图，背景用 16:9 横版",
+    "userConfirmed": true
+  },
+  "assetCount": 10,
+  "assets": [
+    { "filename": "brand-logo.jpg", "title": "品牌主图标", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-001", "usage": "App favicon / 登录页 Logo / 侧边栏品牌，替换现有闪电与机器人图标" },
+    { "filename": "assistant-avatar.jpg", "title": "AI 助手头像", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-002", "usage": "对话消息中 AI 助手头像" },
+    { "filename": "bg-login.jpg", "title": "登录页背景", "intendedSize": "landscape_16_9 (1280x720)", "toolImageSize": "landscape_16_9", "status": "success", "nodeId": "image-003", "usage": "登录/注册页全屏背景" },
+    { "filename": "bg-chat.jpg", "title": "对话页背景", "intendedSize": "landscape_16_9 (1280x720)", "toolImageSize": "landscape_16_9", "status": "success", "nodeId": "image-004", "usage": "对话页极浅纹理背景" },
+    { "filename": "empty-welcome.jpg", "title": "对话欢迎页插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-005", "usage": "对话空态欢迎页" },
+    { "filename": "empty-knowledge.jpg", "title": "知识库空态插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-006", "usage": "知识库页空态" },
+    { "filename": "empty-skills.jpg", "title": "技能管理空态插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-007", "usage": "技能管理页空态" },
+    { "filename": "upload-guide.jpg", "title": "上传拖拽引导插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-008", "usage": "知识库/技能上传拖拽区引导" },
+    { "filename": "state-network-error.jpg", "title": "网络错误状态插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-009", "usage": "网络异常/请求失败错误态" },
+    { "filename": "state-404.jpg", "title": "404 页面插画", "intendedSize": "square_hd (1024x1024)", "toolImageSize": "square_hd", "status": "success", "nodeId": "image-010", "usage": "404 页面未找到" }
+  ],
+  "failedOrOmitted": []
+}

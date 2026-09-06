@@ -25,6 +25,7 @@ import {
   uploadDocument,
   type KnowledgeDoc,
 } from '../api'
+import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 /**
  * 知识库管理页
@@ -142,7 +143,11 @@ export default function KnowledgePage() {
         {/* 文档列表 */}
         <Card title={`我的知识库（${docs.length}）`} className="skills-panel">
           {docs.length === 0 ? (
-            <Empty description="还没有知识文档，上传一个试试吧" />
+            <Empty
+              image={<img className="empty-illust" src={assistantAvatar} alt="" />}
+              imageStyle={{ height: 'auto' }}
+              description="还没有知识文档，上传一个试试吧"
+            />
           ) : (
             <List
               itemLayout="horizontal"

@@ -5,6 +5,7 @@ import {
   Card,
   Checkbox,
   Divider,
+  Empty,
   Form,
   Input,
   Popconfirm,
@@ -16,6 +17,7 @@ import {
 import { CloudUploadOutlined, DeleteOutlined } from '@ant-design/icons'
 import type { UploadProps } from 'antd'
 import { api } from '../api'
+import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 interface Skill {
   name: string
@@ -140,6 +142,13 @@ export default function SkillsPage() {
       <Spin spinning={loading}>
         {/* 全部技能 */}
         <Card title="全部技能" className="skills-panel">
+          {skills.length === 0 ? (
+            <Empty
+              image={<img className="empty-illust" src={assistantAvatar} alt="" />}
+              imageStyle={{ height: 'auto' }}
+              description="还没有技能，上传一个试试吧"
+            />
+          ) : (
           <div className="skills-grid">
             {skills.map((s) => (
               <Card
@@ -194,6 +203,7 @@ export default function SkillsPage() {
               </Card>
             ))}
           </div>
+          )}
         </Card>
 
         {/* 上传新技能 */}
