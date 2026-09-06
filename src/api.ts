@@ -49,11 +49,56 @@ export interface KnowledgeDoc {
   createdAt: string
 }
 
-/** 上传知识库文档（.txt/.md） */
-export async function uploadDocument(file: File): Promise<{ id: number; docName: string; chunks: number }> {
-  const fd = new FormData()
-  fd.append('file', file)
-  return api('/api/knowledge/upload', { method: 'POST', body: fd })
+/**
+ * 上传知识库文档（.txt/.md）
+ *
+ * 用 XHR 而非 fetch：需要 upload.onprogress 反馈真实网络上传进度；
+ * 注意响应在服务端切块+向量化完成后才返回，进度到 100% 后到收到响应之间
+ * 即服务端处理时间（调用方可据此显示"正在向量化"阶段）。
+ *
+ * @param onProgress 网络上传进度回调，percent 为 0-100
+ */
+export function uploadDocument(
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<{ id: number; docName: string; chunks: number }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', '/api/knowledge/upload')
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress?.(Math.round((e.loaded / e.total) * 100))
+      }
+    }
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        clearAuth()
+        if (!location.pathname.startsWith('/login')) location.href = '/login'
+        reject(new ApiError('未登录或登录已过期', 401))
+        return
+      }
+      let data: any = {}
+      try {
+        data = JSON.parse(xhr.responseText)
+      } catch {
+        // 非 JSON 响应按错误处理
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data)
+      } else {
+        reject(new ApiError(data.message || `上传失败 (${xhr.status})`, xhr.status))
+      }
+    }
+    xhr.onerror = () => reject(new ApiError('网络连接失败', 0))
+
+    const fd = new FormData()
+    fd.append('file', file)
+    xhr.send(fd)
+  })
 }
 
 /** 当前用户的知识库文档列表 */

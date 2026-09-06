@@ -6,6 +6,7 @@ import {
   Empty,
   List,
   Popconfirm,
+  Progress,
   Space,
   Spin,
   Tag,
@@ -32,7 +33,7 @@ import {
  * 对话时 Agent 会自动检索这些文档片段（RAG），回答里可引用文档内容。
  */
 export default function KnowledgePage() {
-  const { message } = AntdApp.useApp()
+  const { message, notification } = AntdApp.useApp()
   const [docs, setDocs] = useState<KnowledgeDoc[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -58,13 +59,55 @@ export default function KnowledgePage() {
     showUploadList: false,
     customRequest: async (options) => {
       const { file, onSuccess, onError } = options
+      const f = file as File
+      // 同一条通知持续更新：上传进度 → 服务端处理 → 成功/失败
+      const key = `knowledge-upload-${Date.now()}`
+
+      const showProgress = (percent: number) => {
+        const processing = percent >= 100
+        notification.open({
+          key,
+          placement: 'bottomRight',
+          duration: 0,
+          message: processing ? '正在处理文档' : `正在上传《${f.name}》`,
+          description: (
+            <div>
+              <Progress
+                percent={processing ? 100 : percent}
+                status={processing ? 'active' : 'normal'}
+                showInfo={!processing}
+                size="small"
+              />
+              {processing && (
+                <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                  文件已上传，正在切块并向量化（首次处理可能需要十几秒）…
+                </div>
+              )}
+            </div>
+          ),
+        })
+      }
+
+      showProgress(0)
       try {
-        const result = await uploadDocument(file as File)
-        message.success(`「${(file as File).name}」上传成功，切分为 ${result.chunks} 个片段`)
+        const result = await uploadDocument(f, showProgress)
+        notification.success({
+          key,
+          placement: 'bottomRight',
+          duration: 4,
+          message: '上传成功',
+          description: `《${f.name}》已切分为 ${result.chunks} 个片段，对话时可被检索引用`,
+        })
         onSuccess?.({}, new XMLHttpRequest())
         await loadDocs()
       } catch (err: any) {
-        message.error(err.message)
+        notification.error({
+          key,
+          placement: 'bottomRight',
+          duration: 5,
+          message: '上传失败',
+          description: err.message,
+        })
         onError?.(err)
       }
     },
