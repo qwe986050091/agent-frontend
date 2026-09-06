@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Avatar, Button, Empty, Input, Space, Spin, Tag, Tooltip, App as AntdApp } from 'antd'
-import { RobotOutlined, SendOutlined, ToolOutlined, UserOutlined } from '@ant-design/icons'
+import { Input, Spin, Tooltip, App as AntdApp } from 'antd'
+import {
+  ArrowUpOutlined,
+  LoadingOutlined,
+  ToolOutlined,
+} from '@ant-design/icons'
 import { api, streamChat } from '../api'
 import { useAuth } from '../auth'
+
+const { TextArea } = Input
 
 interface Message {
   role: 'user' | 'assistant'
@@ -13,6 +19,16 @@ interface Skill {
   name: string
   shortDescription: string
   mounted: boolean
+}
+
+/** 根据当前时间生成问候语 */
+function greetingOf(): string {
+  const h = new Date().getHours()
+  if (h < 5) return '夜深了'
+  if (h < 11) return '早上好'
+  if (h < 14) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
 }
 
 export default function ChatPage() {
@@ -59,7 +75,7 @@ export default function ChatPage() {
     const text = input.trim()
     if (!text || loading) return
 
-    // 用户消息 + 占位的空 AI 气泡（token 逐段追加进去）
+    // 用户消息 + 占位的空 AI 消息（token 逐段追加进去）
     setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
     setInput('')
     setLoading(true)
@@ -100,100 +116,113 @@ export default function ChatPage() {
     }
   }
 
-  return (
-    <div className="chat-page">
-      {/* 已挂载技能提示条 */}
-      <div className="chat-skillbar">
-        <Space size={8} wrap>
-          <span className="chat-skillbar-label">
+  const displayName = user?.nickname || user?.username || '朋友'
+  const isEmpty = !historyLoading && messages.length === 0
+
+  // ============ 胶囊输入框（空态 / 对话态共用） ============
+  const composer = (
+    <div className="chat-composer-wrap">
+      {mountedSkills.length > 0 && (
+        <div className="chat-skills">
+          <span className="chat-skills-label">
             <ToolOutlined /> 已挂载技能
           </span>
-          {mountedSkills.length === 0 ? (
-            <span className="chat-skillbar-empty">
-              暂无技能，到左侧「技能管理」挂载后可使用工具能力
-            </span>
-          ) : (
-            mountedSkills.map((s) => (
-              <Tooltip key={s.name} title={s.shortDescription}>
-                <Tag color="geekblue" style={{ marginInlineEnd: 0 }}>
-                  {s.name}
-                </Tag>
-              </Tooltip>
-            ))
-          )}
-        </Space>
-      </div>
+          {mountedSkills.map((s) => (
+            <Tooltip key={s.name} title={s.shortDescription}>
+              <span className="chat-skill-chip">{s.name}</span>
+            </Tooltip>
+          ))}
+        </div>
+      )}
 
-      {/* 消息区 */}
-      <div className="chat-message-list" ref={listRef}>
-        {historyLoading ? (
-          <div className="chat-loading">
-            <Spin description="加载历史消息..." />
-          </div>
-        ) : messages.length === 0 ? (
-          <Empty
-            className="chat-empty"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                你好，{user?.nickname || user?.username} 👋
-                <br />
-                试试问我：「现在几点了？」或「(12 + 8) × 3 等于多少？」（需先挂载对应技能）
-              </span>
-            }
-          />
-        ) : (
-          messages.map((m, i) => {
-            const streaming = loading && i === messages.length - 1 && m.role === 'assistant'
-            return (
-              <div key={i} className={`chat-message ${m.role}`}>
-                <Avatar
-                  className="chat-message-avatar"
-                  icon={m.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                  style={
-                    m.role === 'user'
-                      ? { backgroundColor: '#4f46e5' }
-                      : { backgroundColor: '#e0e7ff', color: '#4338ca' }
-                  }
-                />
-                <div className="chat-message-bubble">
-                  {streaming && !m.content ? (
-                    <span className="chat-thinking">
-                      <Spin size="small" /> Agent 思考中...
-                    </span>
-                  ) : (
-                    <pre className="chat-message-content">
-                      {m.content}
-                      {streaming ? <span className="chat-cursor" /> : null}
-                    </pre>
-                  )}
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-
-      {/* 输入区 */}
-      <div className="chat-input-area">
-        <Input.TextArea
+      <div className="chat-composer">
+        <TextArea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息，Enter 发送，Shift + Enter 换行"
-          autoSize={{ minRows: 1, maxRows: 5 }}
+          placeholder="有问题，随便问"
+          variant="borderless"
+          autoSize={{ minRows: 1, maxRows: 6 }}
           disabled={loading}
         />
-        <Button
-          type="primary"
-          icon={<SendOutlined />}
+        <button
+          type="button"
+          className="chat-send-btn"
+          aria-label="发送"
           onClick={send}
-          loading={loading}
-          disabled={!input.trim()}
+          disabled={!input.trim() || loading}
         >
-          发送
-        </Button>
+          {loading ? <LoadingOutlined /> : <ArrowUpOutlined />}
+        </button>
       </div>
+
+      <p className="chat-hint">
+        Enter 发送，Shift + Enter 换行
+        {mountedSkills.length === 0 ? ' · 可在「技能管理」中挂载工具技能' : ''}
+      </p>
+    </div>
+  )
+
+  // ============ 空态：居中问候 + 输入框 ============
+  if (historyLoading) {
+    return (
+      <div className="chat-page">
+        <div className="chat-loading">
+          <Spin />
+          <span>加载历史消息...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isEmpty) {
+    return (
+      <div className="chat-page chat-page--welcome">
+        <div className="chat-welcome">
+          <h1 className="chat-greeting">
+            {greetingOf()}，{displayName}
+          </h1>
+          {composer}
+        </div>
+      </div>
+    )
+  }
+
+  // ============ 对话态：消息流 + 底部输入框 ============
+  return (
+    <div className="chat-page">
+      <div className="chat-message-list" ref={listRef}>
+        <div className="chat-thread">
+          {messages.map((m, i) => {
+            const streaming = loading && i === messages.length - 1 && m.role === 'assistant'
+            if (m.role === 'user') {
+              return (
+                <div key={i} className="chat-row user">
+                  <div className="chat-bubble-user">
+                    <pre className="chat-text">{m.content}</pre>
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div key={i} className="chat-row assistant">
+                {streaming && !m.content ? (
+                  <span className="chat-thinking">
+                    <LoadingOutlined /> 思考中...
+                  </span>
+                ) : (
+                  <pre className="chat-text">
+                    {m.content}
+                    {streaming ? <span className="chat-cursor" /> : null}
+                  </pre>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {composer}
     </div>
   )
 }

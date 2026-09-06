@@ -1,19 +1,25 @@
 import { useState } from 'react'
-import { Avatar, Dropdown, Layout, Menu, Space, Tag, Typography } from 'antd'
+import { Avatar, Dropdown } from 'antd'
 import {
   AppstoreOutlined,
+  BookOutlined,
+  EditOutlined,
   LogoutOutlined,
-  MessageOutlined,
-  RobotOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 
-const { Sider, Header, Content } = Layout
+const NAV_ITEMS = [
+  { key: '/', icon: <EditOutlined />, label: '新聊天' },
+  { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
+  { key: '/skills', icon: <AppstoreOutlined />, label: '技能管理' },
+]
 
 /**
- * 登录后的主框架：左侧边栏（功能导航）+ 顶部用户区 + 内容区
+ * 登录后的主框架：浅色极简侧边栏 + 内容区（ChatGPT 风格）
  */
 export default function MainLayout() {
   const { user, logout } = useAuth()
@@ -21,10 +27,7 @@ export default function MainLayout() {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
 
-  const menuItems = [
-    { key: '/', icon: <MessageOutlined />, label: '对话' },
-    { key: '/skills', icon: <AppstoreOutlined />, label: '技能管理' },
-  ]
+  const displayName = user?.nickname || user?.username || '用户'
 
   async function handleLogout() {
     await logout()
@@ -32,36 +35,42 @@ export default function MainLayout() {
   }
 
   return (
-    <Layout className="main-layout">
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-        width={210}
-        className="main-sider"
-      >
-        <div className="sider-logo">
-          <RobotOutlined className="sider-logo-icon" />
-          {!collapsed && <span className="sider-logo-text">Agent 助手</span>}
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={menuItems}
-          onClick={({ key }) => navigate(key)}
-        />
-      </Sider>
+    <div className="app-shell">
+      {/* ============ 左侧边栏 ============ */}
+      <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <div className="app-sidebar-inner">
+          <div className="sidebar-header">
+            <span className="sidebar-brand">Agent 助手</span>
+            <button
+              type="button"
+              className="sidebar-icon-btn"
+              title="收起侧边栏"
+              onClick={() => setCollapsed(true)}
+            >
+              <MenuFoldOutlined />
+            </button>
+          </div>
 
-      <Layout>
-        <Header className="main-header">
-          <Typography.Text strong className="header-title">
-            {location.pathname === '/skills' ? '技能管理' : '智能对话'}
-          </Typography.Text>
-          <Space size="middle">
-            <Tag color="geekblue">LangChain4j</Tag>
+          <nav className="sidebar-nav">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`sidebar-nav-item ${location.pathname === item.key ? 'active' : ''}`}
+                onClick={() => navigate(item.key)}
+              >
+                <span className="sidebar-nav-icon">{item.icon}</span>
+                <span className="sidebar-nav-label">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="sidebar-spacer" />
+
+          <div className="sidebar-footer">
             <Dropdown
+              trigger={['click']}
+              placement="topLeft"
               menu={{
                 items: [
                   {
@@ -73,18 +82,39 @@ export default function MainLayout() {
                 ],
               }}
             >
-              <Space className="header-user" style={{ cursor: 'pointer' }}>
-                <Avatar size="small" icon={<UserOutlined />} />
-                <span>{user?.nickname || user?.username}</span>
-              </Space>
+              <div className="sidebar-user">
+                <Avatar
+                  size={32}
+                  icon={<UserOutlined />}
+                  className="sidebar-user-avatar"
+                  style={{ backgroundColor: '#dbe6ff', color: '#3b6fd4' }}
+                />
+                <div className="sidebar-user-meta">
+                  <span className="sidebar-user-name">{displayName}</span>
+                  <span className="sidebar-user-sub">
+                    {user?.nickname ? `@${user.username}` : '已登录'}
+                  </span>
+                </div>
+              </div>
             </Dropdown>
-          </Space>
-        </Header>
+          </div>
+        </div>
+      </aside>
 
-        <Content className="main-content">
-          <Outlet />
-        </Content>
-      </Layout>
-    </Layout>
+      {/* ============ 主内容区 ============ */}
+      <main className="app-main">
+        {collapsed && (
+          <button
+            type="button"
+            className="sidebar-expand-btn"
+            title="展开侧边栏"
+            onClick={() => setCollapsed(false)}
+          >
+            <MenuUnfoldOutlined />
+          </button>
+        )}
+        <Outlet />
+      </main>
+    </div>
   )
 }
