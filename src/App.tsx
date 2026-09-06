@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout'
 import LoginPage from './pages/LoginPage'
 import ChatPage from './pages/ChatPage'
 import SkillsPage from './pages/SkillsPage'
+import KnowledgePage from './pages/KnowledgePage'
 
 /** 登录守卫：未登录跳转登录页 */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export default function App() {
         }
       >
         <Route path="/" element={<ChatPage />} />
+        <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/skills" element={<SkillsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

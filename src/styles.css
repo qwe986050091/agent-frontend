@@ -13,6 +13,20 @@ body,
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  color: #1f2329;
+  background: #fff;
+}
+
+:root {
+  --accent: #4d86ff;
+  --accent-hover: #3b76f6;
+  --sidebar-bg: #f9f9f9;
+  --hover-bg: #ececed;
+  --active-bg: #e6e6e8;
+  --border: #ececee;
+  --text-1: #1f2329;
+  --text-2: #6b6f76;
+  --text-3: #9aa0a8;
 }
 
 /* ============ 登录页 ============ */
@@ -22,7 +36,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef2ff 0%, #f5f6fa 60%);
+  background: linear-gradient(160deg, #f2f7ff 0%, #ffffff 65%);
   padding: 20px;
   overflow: auto;
 }
@@ -30,12 +44,12 @@ body {
 .auth-card {
   width: 400px;
   max-width: 100%;
-  box-shadow: 0 10px 40px rgba(79, 70, 229, 0.12);
-  border-radius: 16px;
+  box-shadow: 0 12px 44px rgba(60, 100, 180, 0.12);
+  border-radius: 20px;
 }
 
 .auth-card .ant-card-body {
-  padding: 32px 32px 28px;
+  padding: 34px 34px 28px;
 }
 
 .auth-brand {
@@ -46,8 +60,8 @@ body {
 .auth-logo {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
-  background: #4f46e5;
+  border-radius: 16px;
+  background: var(--accent);
   color: #fff;
   font-size: 24px;
   display: flex;
@@ -56,57 +70,193 @@ body {
   margin: 0 auto 12px;
 }
 
-/* ============ 主框架 ============ */
-.main-layout {
+/* ============ 主框架：浅色侧边栏 ============ */
+.app-shell {
   height: 100%;
-}
-
-.main-sider {
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
-}
-
-.sider-logo {
-  height: 64px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #fff;
   overflow: hidden;
 }
 
-.sider-logo-icon {
-  font-size: 24px;
-  color: #a5b4fc;
+.app-sidebar {
+  width: 264px;
   flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  transition: width 0.2s ease;
+  overflow: hidden;
 }
 
-.sider-logo-text {
-  font-size: 16px;
-  font-weight: 700;
-  white-space: nowrap;
+.app-sidebar.collapsed {
+  width: 0;
+  border-right-color: transparent;
 }
 
-.main-header {
-  background: #fff;
-  padding: 0 24px;
+.app-sidebar-inner {
+  width: 264px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 10px 6px 16px;
 }
 
-.header-title {
-  font-size: 16px;
+.sidebar-brand {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: 0.2px;
 }
 
-.header-user {
-  color: #4b5563;
+.sidebar-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: #5c6168;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
 }
 
-.main-content {
+.sidebar-icon-btn:hover {
+  background: var(--hover-bg);
+}
+
+/* 侧边栏导航 */
+.sidebar-nav {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  color: #2c2f36;
+  font-size: 15px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sidebar-nav-item:hover {
+  background: var(--hover-bg);
+}
+
+.sidebar-nav-item.active {
+  background: var(--active-bg);
+  font-weight: 600;
+}
+
+.sidebar-nav-icon {
+  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-spacer {
+  flex: 1;
+}
+
+/* 侧边栏底部用户区 */
+.sidebar-footer {
+  padding: 8px;
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sidebar-user:hover {
+  background: var(--hover-bg);
+}
+
+.sidebar-user-avatar {
+  flex-shrink: 0;
+}
+
+.sidebar-user-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.3;
+  white-space: nowrap;
   overflow: hidden;
-  background: #f5f6fa;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 主内容区 */
+.app-main {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  background: #fff;
+  overflow: hidden;
+}
+
+.sidebar-expand-btn {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 10px;
+  color: #5c6168;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: background 0.15s;
+}
+
+.sidebar-expand-btn:hover {
+  background: #f4f4f6;
 }
 
 /* ============ 对话页 ============ */
@@ -116,72 +266,84 @@ body {
   flex-direction: column;
 }
 
-.chat-skillbar {
-  padding: 8px 20px;
-  background: #eef2ff;
-  border-bottom: 1px solid #e0e7ff;
-  flex-shrink: 0;
+/* 空态：垂直居中 */
+.chat-page--welcome {
+  justify-content: center;
 }
 
-.chat-skillbar-label {
+.chat-welcome {
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-greeting {
+  font-size: 30px;
   font-weight: 600;
-  color: #4338ca;
+  color: var(--text-1);
+  text-align: center;
+  margin: 0 0 28px;
+  letter-spacing: 0.5px;
 }
 
-.chat-skillbar-empty {
-  color: #6b7280;
-  font-size: 13px;
+.chat-loading {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 14px;
 }
 
+/* 消息流 */
 .chat-message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 0;
 }
 
-.chat-loading,
-.chat-empty {
-  margin-top: 12vh;
+.chat-thread {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 28px 20px 20px;
 }
 
-.chat-message {
+.chat-row {
+  margin-bottom: 22px;
   display: flex;
-  gap: 12px;
-  max-width: 820px;
-  margin: 0 auto 18px;
-  padding: 0 20px;
 }
 
-.chat-message-avatar {
-  flex-shrink: 0;
+.chat-row.user {
+  justify-content: flex-end;
 }
 
-.chat-message-bubble {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 10px 14px;
-  max-width: calc(100% - 60px);
+.chat-bubble-user {
+  max-width: 75%;
+  background: #f4f4f5;
+  border-radius: 18px;
+  padding: 10px 15px;
 }
 
-.chat-message.user .chat-message-bubble {
-  background: #4f46e5;
-  border-color: #4f46e5;
-  color: #fff;
+.chat-row.assistant {
+  justify-content: flex-start;
 }
 
-.chat-message-content {
+.chat-text {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #2c2f36;
   margin: 0;
 }
 
 .chat-thinking {
-  color: #6b7280;
-  font-size: 13px;
+  color: var(--text-3);
+  font-size: 14px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -190,17 +352,13 @@ body {
 /* 流式输出中的闪烁光标 */
 .chat-cursor {
   display: inline-block;
-  width: 7px;
-  height: 15px;
+  width: 8px;
+  height: 16px;
   margin-left: 2px;
   vertical-align: text-bottom;
-  background: #4f46e5;
-  border-radius: 1px;
+  background: var(--accent);
+  border-radius: 2px;
   animation: chat-cursor-blink 0.9s step-start infinite;
-}
-
-.chat-message.user .chat-cursor {
-  background: #fff;
 }
 
 @keyframes chat-cursor-blink {
@@ -209,35 +367,146 @@ body {
   }
 }
 
-.chat-input-area {
+/* ============ 胶囊输入框 ============ */
+.chat-composer-wrap {
   flex-shrink: 0;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px 22px;
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+}
+
+.chat-page--welcome .chat-composer-wrap {
+  padding-bottom: 0;
+}
+
+.chat-composer {
+  display: flex;
   align-items: flex-end;
-  padding: 14px 20px 18px;
+  gap: 10px;
   background: #fff;
-  border-top: 1px solid #f0f0f0;
+  border: 1px solid #e4e5e9;
+  border-radius: 26px;
+  padding: 7px 8px 7px 18px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.chat-input-area .ant-input {
-  border-radius: 10px;
+.chat-composer:focus-within {
+  border-color: #b9cdf8;
+  box-shadow: 0 4px 22px rgba(77, 134, 255, 0.16);
 }
 
-.chat-input-area .ant-btn {
-  height: auto;
-  padding: 8px 22px;
+.chat-composer .ant-input {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  padding: 7px 4px;
+  font-size: 15px;
+  resize: none;
 }
 
-/* ============ 技能管理页 ============ */
+.chat-composer .ant-input::placeholder {
+  color: #b3b7bf;
+}
+
+.chat-send-btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  margin-bottom: 1px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: #e6e7ea;
+  color: #b4b7be;
+  cursor: not-allowed;
+  transition: background 0.15s, color 0.15s;
+}
+
+.chat-send-btn:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.chat-send-btn:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+
+.chat-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: #a8acb4;
+}
+
+/* 已挂载技能小标签 */
+.chat-skills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.chat-skills-label {
+  font-size: 12px;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-skill-chip {
+  font-size: 12px;
+  color: #4b5563;
+  background: #f2f4f7;
+  border: 1px solid #e9ecf1;
+  padding: 3px 11px;
+  border-radius: 999px;
+  cursor: default;
+  transition: background 0.15s;
+}
+
+.chat-skill-chip:hover {
+  background: #e8edf4;
+}
+
+/* ============ 技能管理 / 知识库页 ============ */
 .skills-page {
   height: 100%;
   overflow-y: auto;
-  padding: 20px;
+  padding: 30px 24px 44px;
 }
 
 .skills-panel {
-  max-width: 1080px;
+  max-width: 960px;
   margin: 0 auto 20px;
+  border-radius: 16px;
+  border: 1px solid #ededf0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.skills-panel .ant-card-head {
+  min-height: auto;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f2f2f4;
+}
+
+.skills-panel .ant-card-head-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.skills-panel .ant-card-body {
+  padding: 20px;
 }
 
 .skills-grid {
@@ -246,9 +515,18 @@ body {
   gap: 14px;
 }
 
+.skill-card {
+  border-radius: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.skill-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
 .skill-card.mounted {
-  border-color: #4f46e5;
-  background: #eef2ff;
+  border-color: var(--accent);
+  background: #f6f9ff;
 }
 
 .skill-card .ant-card-head {
@@ -261,13 +539,24 @@ body {
 }
 
 .skill-card-desc {
-  color: #6b7280;
+  color: var(--text-2);
   font-size: 13px;
   margin: 0 0 6px;
 }
 
 .skill-card-tools {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-2);
   margin: 0;
+}
+
+/* 上传拖拽区 */
+.ant-upload-drag {
+  border-radius: 14px;
+  border-color: #e4e7ee;
+  background: #fafbfc;
+}
+
+.ant-upload-drag:hover {
+  border-color: var(--accent);
 }

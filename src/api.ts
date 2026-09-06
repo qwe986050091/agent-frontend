@@ -39,6 +39,34 @@ export class ApiError extends Error {
   }
 }
 
+// ==================== 知识库（RAG 文档） ====================
+
+export interface KnowledgeDoc {
+  id: number
+  docName: string
+  docType: string
+  chunkCount: number
+  createdAt: string
+}
+
+/** 上传知识库文档（.txt/.md） */
+export async function uploadDocument(file: File): Promise<{ id: number; docName: string; chunks: number }> {
+  const fd = new FormData()
+  fd.append('file', file)
+  return api('/api/knowledge/upload', { method: 'POST', body: fd })
+}
+
+/** 当前用户的知识库文档列表 */
+export async function listDocuments(): Promise<KnowledgeDoc[]> {
+  const data = await api<{ documents: KnowledgeDoc[] }>('/api/knowledge/documents')
+  return data.documents || []
+}
+
+/** 删除知识库文档 */
+export async function deleteDocument(id: number): Promise<void> {
+  await api(`/api/knowledge/documents/${id}`, { method: 'DELETE' })
+}
+
 /** 请求配置：body 允许传普通对象（自动 JSON 序列化）、FormData 或字符串 */
 export interface ApiOptions extends Omit<RequestInit, 'body'> {
   body?: any
