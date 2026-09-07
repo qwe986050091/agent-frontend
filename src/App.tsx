@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useAuth } from './auth'
 import MainLayout from './layouts/MainLayout'
 import LoginPage from './pages/LoginPage'
+import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
 import SkillsPage from './pages/SkillsPage'
 import KnowledgePage from './pages/KnowledgePage'
@@ -28,7 +29,8 @@ export default function App() {
           </RequireAuth>
         }
       >
-        <Route path="/" element={<ChatPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/skills" element={<SkillsPage />} />
       </Route>

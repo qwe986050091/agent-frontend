@@ -4,18 +4,20 @@ import {
   AppstoreOutlined,
   BookOutlined,
   EditOutlined,
+  HomeOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  RobotOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import DeskPet from '../components/DeskPet'
+import appIcon from '../assets/app-icon.jpg'
 
 const NAV_ITEMS = [
-  { key: '/', icon: <EditOutlined />, label: '新聊天' },
+  { key: '/', icon: <HomeOutlined />, label: '首页' },
+  { key: '/chat', icon: <EditOutlined />, label: '新聊天' },
   { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/skills', icon: <AppstoreOutlined />, label: '技能管理' },
 ]
@@ -43,9 +45,7 @@ export default function MainLayout() {
         <div className="app-sidebar-inner">
           <div className="sidebar-header">
             <span className="sidebar-brand">
-              <span className="sidebar-brand-dot">
-                <RobotOutlined />
-              </span>
+              <img className="sidebar-brand-dot" src={appIcon} alt="" />
               Agent 助手
             </span>
             <button
