@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Button, Card, Form, Input, Tabs, Typography, App as AntdApp } from 'antd'
-import { LockOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import characterSplash from '../assets/character-splash.jpg'
+import appIcon from '../assets/app-icon.jpg'
 
 interface LoginFormValues {
   username: string
@@ -48,9 +49,7 @@ export default function LoginPage() {
       <div className="auth-panel">
         <Card className="auth-card" variant="borderless">
         <div className="auth-brand">
-          <div className="auth-logo">
-            <RobotOutlined />
-          </div>
+          <img className="auth-logo" src={appIcon} alt="Agent AI" />
           <Typography.Title level={3} style={{ margin: 0 }}>
             Agent AI 对话助手
           </Typography.Title>

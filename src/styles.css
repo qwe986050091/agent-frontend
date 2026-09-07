@@ -156,17 +156,14 @@ body {
 }
 
 .auth-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #6a97ff, #4d86ff);
-  color: #fff;
-  font-size: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  object-fit: cover;
+  display: block;
   margin: 0 auto 14px;
-  box-shadow: var(--shadow-glow);
+  border: 1px solid rgba(77, 134, 255, 0.16);
+  box-shadow: 0 12px 30px rgba(77, 134, 255, 0.3);
 }
 
 .auth-brand .ant-typography {
@@ -230,16 +227,13 @@ body {
 }
 
 .sidebar-brand-dot {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #6a97ff, #4d86ff);
-  color: #fff;
-  font-size: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(77, 134, 255, 0.32);
+  object-fit: cover;
+  display: inline-block;
+  border: 1px solid rgba(77, 134, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(77, 134, 255, 0.28);
 }
 
 .sidebar-icon-btn {
@@ -803,43 +797,181 @@ body {
   color: var(--accent);
 }
 
+/* ============ 首页：品牌欢迎 + 立绘展示 ============ */
+.home-page {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  padding: 40px 48px;
+}
+
+.home-inner {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.home-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-active);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.home-title {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--text-1);
+  margin: 0 0 16px;
+  letter-spacing: 0.5px;
+}
+
+.home-title-accent {
+  background: linear-gradient(120deg, #4d86ff, #f17cad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.home-subtitle {
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--text-2);
+  margin: 0 0 30px;
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.home-actions .ant-btn-lg {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+.home-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.home-chips span {
+  font-size: 13px;
+  color: var(--text-2);
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  padding: 5px 13px;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(23, 43, 92, 0.04);
+}
+
+.home-figure {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-figure-glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(77, 134, 255, 0.2), rgba(241, 124, 173, 0.12) 48%, transparent 70%);
+  filter: blur(8px);
+  animation: welcomeHalo 5s ease-in-out infinite;
+}
+
+.home-figure-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 30px 70px rgba(77, 134, 255, 0.26);
+  animation: authFloat 6s ease-in-out infinite;
+  background: #fff;
+}
+
+.home-figure-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 920px) {
+  .home-page {
+    padding: 28px 20px 48px;
+    align-items: flex-start;
+  }
+  .home-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .home-figure {
+    order: -1;
+  }
+  .home-figure-card {
+    max-width: 280px;
+  }
+  .home-title {
+    font-size: 32px;
+  }
+}
+
 /* ============================================================
    桌宠 Desk Pet
    ============================================================ */
 #desk-pet {
   position: fixed;
   z-index: 60;
-  left: 0;
-  top: 0;
-  width: 118px;
-  touch-action: none;
+  right: 22px;
+  bottom: 16px;
+  width: 132px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   user-select: none;
   -webkit-user-select: none;
 }
 
 #desk-pet .pet-figure {
   position: relative;
-  width: 118px;
-  cursor: grab;
-}
-
-#desk-pet.dragging .pet-figure {
-  cursor: grabbing;
+  width: 132px;
+  cursor: pointer;
 }
 
 #desk-pet img.pet-img {
-  width: 118px;
+  width: 132px;
   height: auto;
   display: block;
   -webkit-user-drag: none;
-  mix-blend-mode: multiply;
-  filter: drop-shadow(0 12px 16px rgba(23, 43, 92, 0.16));
+  filter: drop-shadow(0 10px 14px rgba(23, 43, 92, 0.18));
   animation: petBob 3.6s ease-in-out infinite;
   transform-origin: 50% 88%;
+  transition: transform 0.15s ease, opacity 0.3s ease;
 }
 
-#desk-pet.dragging img.pet-img {
-  animation: none;
+#desk-pet .pet-figure:hover img.pet-img {
+  transform: translateY(-3px) scale(1.03);
 }
 
 @keyframes petBob {
@@ -893,16 +1025,18 @@ body {
   100% { opacity: 0; transform: translateY(-20px) translateX(7px) scale(1.1); }
 }
 
-/* 摸摸头反应 */
-#desk-pet.patting img.pet-img {
-  animation: patBounce 0.55s ease;
+/* 点击：开心地跳一下（蓄力 → 跃起 → 落地回弹） */
+#desk-pet img.pet-img.jumping {
+  animation: petJump 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes patBounce {
-  0% { transform: scale(1, 1); }
-  30% { transform: scale(1.09, 0.88) translateY(5px); }
-  55% { transform: scale(0.95, 1.06) translateY(-4px); }
-  100% { transform: scale(1, 1); }
+@keyframes petJump {
+  0% { transform: translateY(0) scale(1, 1); }
+  20% { transform: translateY(7px) scale(1.1, 0.84); }
+  42% { transform: translateY(-30px) scale(0.95, 1.07); }
+  68% { transform: translateY(0) scale(1.08, 0.9); }
+  84% { transform: translateY(-5px) scale(0.99, 1.02); }
+  100% { transform: translateY(0) scale(1, 1); }
 }
 
 .pet-fx {
@@ -931,14 +1065,23 @@ body {
 }
 
 #pet-bubble {
+  position: relative;
+  width: 216px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-1);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
   transition: opacity 0.3s ease, transform 0.3s ease;
-  width: 240px;
-  margin-left: -61px;
 }
 
 #pet-bubble.show {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
+  opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
 }
 
@@ -946,42 +1089,11 @@ body {
   content: '';
   position: absolute;
   bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
+  right: 32px;
   width: 12px;
   height: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-}
-
-#pet-mode {
-  position: absolute;
-  top: 2px;
-  right: -8px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  font-size: 10px;
-  line-height: 1;
-  font-weight: 600;
-  white-space: nowrap;
-  background: var(--sidebar-bg);
-  border: 1px solid var(--border);
-  color: var(--accent-active);
-  box-shadow: 0 4px 10px rgba(23, 43, 92, 0.08);
-}
-
-#pet-mode .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: var(--pet-mint);
-}
-
-#desk-pet:not(.follow-on) #pet-mode .dot {
-  background: var(--text-3);
+  background: rgba(255, 255, 255, 0.86);
+  border-right: 1px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+  transform: rotate(45deg);
 }
