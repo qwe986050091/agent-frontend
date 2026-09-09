@@ -174,6 +174,8 @@ export async function streamChat(
       signal: handlers.signal,
     })
   } catch (e: any) {
+    // 用户主动停止（AbortController.abort()）：统一为"已停止生成"提示，不当作网络错误
+    if (e?.name === 'AbortError') throw new ApiError('已停止生成', 0)
     throw new ApiError(e?.message || '网络连接失败', 0)
   }
 
