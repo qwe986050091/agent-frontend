@@ -35,10 +35,16 @@
   - [x] 4.5 内存治理：`memoryStore` 已随 P0-3 无状态化消除（记忆请求级重建）；向量库容量监控并入 P1-9
   - 验收：压测下线程/连接数有上限（待压测实测）；agent 宕机/熔断时 backend 返回 503 + AGENT_UNAVAILABLE 友好降级而非裸 500
 
-- [ ] **5. 认证体系加固**
-  - 现状：token 为 DB 单值 UUID，无过期、无 refresh、单端登录互踢、无限流
-  - 动作：改为 JWT（access token 短期 + refresh token）或加过期时间与续期；登录/注册接口加速率限制防暴力破解
-  - 验收：token 过期自动跳转登录；连续错误登录被限流
+- [x] **5. 认证体系加固** ✅ 2026-09-09 完成
+  - ~~现状：token 为 DB 单值 UUID，无过期、无 refresh、单端登录互踢、无限流~~
+  - 已落地（引入 Redis 会话 + 限流，生产验证通过）：
+    - 依赖：`spring-boot-starter-data-redis`（Lettuce 单连接），配置段 `spring.data.redis.*`（host/port/password 走 `${REDIS_HOST:localhost}` / `${REDIS_PORT:6379}` / `${REDIS_PASSWORD:}`，密码由 systemd 注入）
+    - 会话外置 Redis：`auth:session:{token}` → userId（TTL 7 天 `auth.session-ttl-seconds` 可配，每次有效请求滑动续期）；`auth:user:{userId}` → 活跃 token（新登录顶掉旧会话实现单端互踢，登出即删）；`app_user.token` 列/schema/实体/仓库全部移除（生产库旧列保留未删，无引用）
+    - 失败限流：`auth:fail:user:{name}` / `auth:fail:ip:{ip}` 计数（10 分钟窗口），达 `auth.max-failures`(5) 次 → 锁 `auth.lock:*` 15 分钟，锁定期登录/注册返回 429 `RATE_LIMITED`；登录成功清空计数
+    - 客户端 IP 取 X-Forwarded-For 首地址，IPv6/IPv4 回环统一为 127.0.0.1（防限流桶分裂）
+    - 前后端（PC web + agent_mobile App）零改动：401 统一跳登录、429 展示提示的既有逻辑已覆盖
+  - 验收（线上实测 82.156.243.32）：注册/登录 200 下发 token；/me 200；无/伪 token 401；新登录后旧 token 401（互踢）；登出后 token 401；连续 5 次错误密码第 6 次 429、锁定期正确密码也 429；会话 TTL=604800 且请求后滑动续期；nginx HTTPS 链路 200
+  - 部署：腾讯云新机器 `dnf install redis`（redis-7.2.15，仅监听 127.0.0.1 + requirepass 强随机密码），密码经 `REDIS_PASSWORD` 注入 agent-backend.service，`daemon-reload` 后重启
 
 ---
 
@@ -54,11 +60,12 @@
   - 安全前提：危险工具（HTTP/执行命令）必须配权限控制 + 人工确认（human-in-the-loop）
   - 验收：新工具可通过 Skill 机制挂载；高危操作前端弹确认后才执行
 
-- [ ] **7. Agent 循环护栏**
-  - [ ] 7.1 工具调用最大轮次限制（防止模型死循环烧 token），超限后强制收敛回复
-  - [ ] 7.2 中断真正传播：前端 AbortSignal → backend 断连 → agent 侧 LLM 调用真正取消（当前 backend 断开后 agent 仍继续生成）
-  - [ ] 7.3 LLM 调用失败重试 + fallback 备用模型（主模型限流/故障时降级）
-  - 验收：构造死循环 prompt 时轮次有上限；点"停止"后 agent 日志确认生成终止
+- [x] **7. Agent 循环护栏** ✅ 2026-09-09 完成（7.1-7.3 线上实测）
+  - [x] 7.1 工具调用轮次上限：`AiServices.builder().maxToolCallingRoundTrips(n)`，参数 `agent.loop.max-tool-round-trips`（默认 15，原库默认 100 太高）；超限（同步/流式）收敛为友好提示"已达到最大工具调用轮次，已自动中止以避免死循环"而非 500
+  - [x] 7.2 中断真正传播：前端 AbortSignal（PC ChatPage 新增停止按钮；App 原有 close）→ backend `AgentClient.chatStream` 暴露响应体流引用，`ChatController` 挂 onError/onCompletion/onTimeout 主动 close 流取消对 agent 请求 → agent `AgentController` 请求级 `cancelled` 标记 + 线程 interrupt，token 回调检测取消即抛异常终止 LLM 生成
+  - [x] 7.3 LLM 失败重试 + fallback：`AgentConfig` 构建主/备用两套 ChatModel + StreamingChatModel（`fallback-model-name` 默认 deepseek-chat，环境变量 OPENAI_FALLBACK_MODEL 可配）；同步对话主模型失败自动降级备用模型重试一次；流式仅在「未输出任何 token 前」失败才降级（避免重复输出）
+  - 配套：流式模型补挂 ReActLoggerListener（原缺口），同步/流式统一可观测；onError 去重防刷屏
+  - 验收（线上实测 82.156.243.32）：死循环 prompt 触发工具循环 → 15 轮截断返回收敛提示；流式生成中断开连接 → agent 日志确认 LLM 调用被取消（"[ReAct] LLM 调用出错: 客户端已断开，取消生成"）且流线程释放；主模型临时改为不存在的模型 → 对话降级备用模型正常回答"1+1等于2"
 
 - [ ] **8. 多会话（conversation）支持**
   - 现状：memoryId = userId，一个用户只有一条平铺对话线

@@ -3,6 +3,7 @@ import { Input, Spin, Tooltip, App as AntdApp } from 'antd'
 import {
   ArrowUpOutlined,
   LoadingOutlined,
+  StopOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
 import { api, streamChat } from '../api'
@@ -42,6 +43,8 @@ export default function ChatPage() {
   const [historyLoading, setHistoryLoading] = useState(true)
   const [mountedSkills, setMountedSkills] = useState<Skill[]>([])
   const listRef = useRef<HTMLDivElement>(null)
+  // 当前流式请求的 AbortController：点"停止"时 abort，前端断开 → 后端/agent 逐级取消生成
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -80,8 +83,12 @@ export default function ChatPage() {
     setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
     setInput('')
     setLoading(true)
+
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
       await streamChat(text, {
+        signal: controller.signal,
         onToken: (token) =>
           setMessages((m) => {
             const copy = [...m]
@@ -93,6 +100,8 @@ export default function ChatPage() {
           }),
       })
     } catch (err: any) {
+      // 用户主动停止：保留已生成内容，不弹错误
+      if (err?.status === 0 && err?.message === '已停止生成') return
       message.error(err.message)
       setMessages((m) => {
         const copy = [...m]
@@ -106,8 +115,14 @@ export default function ChatPage() {
         return copy
       })
     } finally {
+      abortRef.current = null
       setLoading(false)
     }
+  }
+
+  /** 停止当前生成：abort 前端 fetch → 后端/agent 逐级断开并取消 LLM 生成 */
+  function stop() {
+    abortRef.current?.abort()
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -149,11 +164,11 @@ export default function ChatPage() {
         <button
           type="button"
           className="chat-send-btn"
-          aria-label="发送"
-          onClick={send}
-          disabled={!input.trim() || loading}
+          aria-label={loading ? '停止生成' : '发送'}
+          onClick={loading ? stop : send}
+          disabled={!input.trim() && !loading}
         >
-          {loading ? <LoadingOutlined /> : <ArrowUpOutlined />}
+          {loading ? <StopOutlined /> : <ArrowUpOutlined />}
         </button>
       </div>
 
