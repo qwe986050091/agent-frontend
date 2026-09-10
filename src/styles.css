@@ -305,8 +305,14 @@ body {
   flex: 1;
 }
 
+/* 侧边栏固定顶部（品牌 + 导航，不随会话列表滚动消失） */
+.sidebar-top {
+  flex-shrink: 0;
+}
+
 /* 侧边栏底部用户区 */
 .sidebar-footer {
+  flex-shrink: 0;
   padding: 8px 10px 12px;
 }
 
@@ -1096,4 +1102,85 @@ body {
   border-right: 1px solid rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.9);
   transform: rotate(45deg);
+}
+
+.sidebar-brand-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+.sidebar-brand-btn:hover .sidebar-brand-dot {
+  box-shadow: 0 4px 14px rgba(77, 134, 255, 0.45);
+}
+
+/* ============ 多会话：侧边栏单滚动区（ChatGPT 风格，整个中部一起滚） ============ */
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 6px;
+}
+
+/* 滚动区里的导航 tab（知识库、技能管理），与固定区 tab 视觉一致 */
+.sidebar-nav--scroll {
+  padding-top: 2px;
+}
+
+/* 「最近」小标题（随列表一起滚动，无新增按钮——新建走顶部"新聊天"） */
+.sidebar-recent-label {
+  padding: 10px 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #8590a6);
+  letter-spacing: 0.4px;
+}
+
+.sidebar-convs-list {
+  padding: 0 8px 4px;
+}
+
+.sidebar-conv-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text-1, #2c384c);
+  transition: background 0.15s;
+}
+.sidebar-conv-item:hover {
+  background: var(--hover-bg, #eef2fb);
+}
+.sidebar-conv-item.active {
+  background: var(--active-bg, #e2eafd);
+  color: var(--accent-active, #2f5fdf);
+}
+
+.sidebar-conv-title {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-conv-ops {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2, #8590a6);
+}
+.sidebar-conv-item:hover .sidebar-conv-ops {
+  display: flex;
+}
+.sidebar-conv-ops .anticon {
+  font-size: 12px;
+  cursor: pointer;
+}
+.sidebar-conv-ops .anticon:hover {
+  color: var(--accent-active, #2f5fdf);
 }

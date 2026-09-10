@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Input, Spin, Tooltip, App as AntdApp } from 'antd'
 import {
   ArrowUpOutlined,
-  LoadingOutlined,
   StopOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
 import { api, streamChat } from '../api'
 import { useAuth } from '../auth'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
@@ -36,6 +36,10 @@ function greetingOf(): string {
 export default function ChatPage() {
   const { user } = useAuth()
   const { message } = AntdApp.useApp()
+  const [searchParams] = useSearchParams()
+
+  // 当前会话 id 由 MainLayout 侧边栏通过 URL query 传入；缺省 0（默认/历史会话）
+  const activeConversationId = Number(searchParams.get('conversationId') || 0)
 
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -46,8 +50,12 @@ export default function ChatPage() {
   // 当前流式请求的 AbortController：点"停止"时 abort，前端断开 → 后端/agent 逐级取消生成
   const abortRef = useRef<AbortController | null>(null)
 
+  // 进入页面 / 切换会话时加载对应历史
   useEffect(() => {
-    loadHistory()
+    loadHistory(activeConversationId)
+  }, [activeConversationId])
+
+  useEffect(() => {
     loadSkills()
   }, [])
 
@@ -55,9 +63,11 @@ export default function ChatPage() {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages, loading])
 
-  async function loadHistory() {
+  async function loadHistory(conversationId: number) {
+    setMessages([])
+    setHistoryLoading(true)
     try {
-      const data = await api<{ messages: Message[] }>('/api/chat/history')
+      const data = await api<{ messages: Message[] }>(`/api/chat/history?conversationId=${conversationId}`)
       setMessages(data.messages || [])
     } catch (err: any) {
       message.error(err.message)
@@ -87,7 +97,7 @@ export default function ChatPage() {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      await streamChat(text, {
+      await streamChat(text, activeConversationId, {
         signal: controller.signal,
         onToken: (token) =>
           setMessages((m) => {
@@ -185,7 +195,7 @@ export default function ChatPage() {
       <div className="chat-page">
         <div className="chat-loading">
           <Spin />
-          <span>加载历史消息...</span>
+          <span>加载会话历史...</span>
         </div>
       </div>
     )
@@ -229,7 +239,7 @@ export default function ChatPage() {
                 <img className="chat-avatar" src={assistantAvatar} alt="助手" />
                 {streaming && !m.content ? (
                   <span className="chat-thinking">
-                    <LoadingOutlined /> 思考中...
+                    <Spin size="small" /> 思考中...
                   </span>
                 ) : (
                   <div className="chat-bubble-assistant">

@@ -39,6 +39,36 @@ export class ApiError extends Error {
   }
 }
 
+// ==================== 多会话（conversation） ====================
+
+export interface Conversation {
+  id: number
+  title: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** 会话列表（含 id=0 默认/历史会话条目，若存在遗留消息） */
+export async function listConversations(): Promise<Conversation[]> {
+  const data = await api<{ conversations: Conversation[] }>('/api/conversations')
+  return data.conversations || []
+}
+
+/** 新建会话 */
+export async function createConversation(title?: string): Promise<Conversation> {
+  return api('/api/conversations', { method: 'POST', body: { title } })
+}
+
+/** 重命名会话 */
+export async function renameConversation(id: number, title: string): Promise<Conversation> {
+  return api(`/api/conversations/${id}`, { method: 'PATCH', body: { title } })
+}
+
+/** 删除会话（级联删除其全部消息与摘要） */
+export async function deleteConversation(id: number): Promise<void> {
+  await api(`/api/conversations/${id}`, { method: 'DELETE' })
+}
+
 // ==================== 知识库（RAG 文档） ====================
 
 export interface KnowledgeDoc {
@@ -160,6 +190,7 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
  */
 export async function streamChat(
   message: string,
+  conversationId: number,
   handlers: { onToken: (token: string) => void; signal?: AbortSignal },
 ): Promise<void> {
   let res: Response
@@ -170,7 +201,7 @@ export async function streamChat(
         'Content-Type': 'application/json',
         ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}),
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, conversationId }),
       signal: handlers.signal,
     })
   } catch (e: any) {

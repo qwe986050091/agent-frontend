@@ -67,10 +67,13 @@
   - 配套：流式模型补挂 ReActLoggerListener（原缺口），同步/流式统一可观测；onError 去重防刷屏
   - 验收（线上实测 82.156.243.32）：死循环 prompt 触发工具循环 → 15 轮截断返回收敛提示；流式生成中断开连接 → agent 日志确认 LLM 调用被取消（"[ReAct] LLM 调用出错: 客户端已断开，取消生成"）且流线程释放；主模型临时改为不存在的模型 → 对话降级备用模型正常回答"1+1等于2"
 
-- [ ] **8. 多会话（conversation）支持**
-  - 现状：memoryId = userId，一个用户只有一条平铺对话线
-  - 动作：backend 新增 conversation 表（新建/切换/重命名/删除会话）；memoryId 与 RAG 过滤改为 conversationId（或 userId+conversationId）；前端加会话列表
-  - 验收：可新建多个独立会话，互不串上下文；历史按会话分组加载
+- [x] **8. 多会话（conversation）支持** ✅ 2026-09-09 完成（线上实测）
+  - 数据模型：新增 `conversation` 表（user_id/title/created_at/updated_at）；`chat_message` 加 `conversation_id`（0=默认/历史会话，多会话上线前遗留数据自动归此）；`agent_memory` 主键改复合 `(user_id, conversation_id)`（摘要按会话隔离）
+  - backend 接口：`GET/POST /api/conversations`（列表/新建）、`PATCH/DELETE /api/conversations/{id}`（重命名/级联删除消息+摘要）；`/api/chat/history?conversationId=N` 按会话查；`chat`/`stream` 请求带 conversationId，摘要与近 30 条历史均按 (userId, conversationId) 组装/回写；对话后刷新会话 updated_at
+  - agent：payload 新增 conversationId；记忆键 `memoryId = userId + "::" + conversationId`（对话记忆按会话隔离）；RAG 检索仍按 userId（长期记忆跨会话共享，有意保留）
+  - 前端：PC ChatPage 新增左侧会话列表面板（新建/切换/重命名/删除，无会话自动建"新对话"）；App ChatScreen 新增"☰ 会话"弹窗列表（切换/新建/重命名/删除）
+  - 生产库已 ALTER（chat_message 加列+索引、agent_memory 复合主键），历史数据自动归默认会话 0
+  - 验收（线上实测 82.156.243.32）：会话 A 问数学/会话 B 问地理 → 各自 history 完全独立、互不串上下文；重命名/删除（级联清消息）正常；摘要按 (user_id, conversation_id) 复合主键存取
 
 - [ ] **9. RAG 生产级升级**
   - 现状：`RagService` 用 InMemoryEmbeddingStore + 全量 JSON 快照；仅支持 txt/md；纯向量召回；无来源引用
