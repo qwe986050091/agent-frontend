@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Avatar, Dropdown, Input, Modal, Popconfirm, App as AntdApp } from 'antd'
 import {
   AppstoreOutlined,
+  BarChartOutlined,
   BookOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -26,6 +27,7 @@ import appIcon from '../assets/app-icon.jpg'
 const NAV_ITEMS = [
   { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/skills', icon: <AppstoreOutlined />, label: '技能管理' },
+  { key: '/usage', icon: <BarChartOutlined />, label: '用量统计' },
 ]
 
 /**

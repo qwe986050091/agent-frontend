@@ -1184,3 +1184,168 @@ body {
 .sidebar-conv-ops .anticon:hover {
   color: var(--accent-active, #2f5fdf);
 }
+
+/* ==================== P2-10 对话内 trace 面板 ==================== */
+.chat-trace-collapse {
+  margin: 0 0 6px;
+}
+.chat-trace-collapse.ant-collapse-ghost {
+  background: transparent;
+}
+.chat-trace-collapse .ant-collapse-header {
+  padding: 2px 6px !important;
+  font-size: 12.5px;
+  color: var(--text-3, #7a869a) !important;
+  align-items: center !important;
+}
+.trace-panel-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.trace-count {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #eef3ff;
+  color: var(--accent, #4d86ff);
+  font-size: 11px;
+  align-items: center;
+  justify-content: center;
+}
+.trace-segments,
+.trace-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 0;
+}
+.trace-segment {
+  background: #f7f9ff;
+  border: 1px solid var(--border-soft, #eef1f6);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.trace-segment-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.trace-segment-source {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3d56a6;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trace-segment-score {
+  font-size: 11px;
+  color: #8a94a8;
+}
+.trace-segment-text {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #5a657a;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.trace-tool {
+  border-left: 3px solid #b7d4a8;
+  background: #fafdf7;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.trace-tool--fail {
+  border-left-color: #f0a8a8;
+  background: #fff8f8;
+}
+.trace-tool-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.trace-tool-icon--ok { color: #6aa84f; }
+.trace-tool-icon--fail { color: #e06b6b; }
+.trace-tool-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 600;
+  color: #3a4a3a;
+}
+.trace-tool-args {
+  color: #8a94a8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trace-tool-duration {
+  margin-left: auto;
+  color: #a6aebb;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.trace-tool-result {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: #6b768a;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.chat-trace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-soft, #eef1f6);
+  font-size: 11.5px;
+  color: #98a1b2;
+}
+.chat-trace-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chat-trace-cost { color: #d9902f; }
+.chat-trace-fallback,
+.chat-trace-cancelled {
+  background: #fef1e0;
+  color: #c77b23;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 10.5px;
+}
+.chat-trace-cancelled {
+  background: #f3f4f7;
+  color: #8a94a8;
+}
+.chat-trace-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-trace-id:hover { color: var(--accent, #4d86ff); }
+
+/* 历史 trace 懒加载入口 */
+.history-trace-load {
+  margin-top: 6px;
+}
+.history-trace-load .ant-collapse-header {
+  font-size: 12px !important;
+  color: var(--text-3, #7a869a) !important;
+  padding: 2px 6px !important;
+}

@@ -179,26 +179,140 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
   return data as T
 }
 
+// ==================== 全链路 trace（P2-10） ====================
+
+export interface ToolTrace {
+  round: number
+  id?: string
+  name: string
+  arguments?: string
+  result?: string
+  success: boolean
+  error?: string | null
+  durationMs: number
+}
+
+export interface RagSegment {
+  docId?: string
+  source: string
+  type: string
+  text: string
+  score: number
+}
+
+export interface RagTrace {
+  query: string
+  segments: RagSegment[]
+}
+
+export interface UsageTrace {
+  model?: string
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  rounds: number
+  fallback: boolean
+  cancelled: boolean
+  durationMs: number
+  /** backend 转发 usage 事件/历史回查时附加（费用只以后端计算为准） */
+  costYuan?: number
+}
+
+/** 历史 trace 懒加载返回（GET /api/chat/traces/{traceId}） */
+export interface TraceDetail {
+  traceId: string
+  usage: UsageTrace
+  tools: ToolTrace[]
+  recalls: RagTrace[]
+}
+
+export async function getTrace(traceId: string): Promise<TraceDetail> {
+  return api(`/api/chat/traces/${encodeURIComponent(traceId)}`)
+}
+
+// ==================== 用量统计（P2-10） ====================
+
+export interface UsageTotals {
+  turns: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  costYuan: number
+}
+
+export interface ModelUsageRow {
+  model: string
+  turns: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  costYuan: number
+}
+
+export interface ConversationUsageRow {
+  conversationId: number
+  title: string | null
+  turns: number
+  totalTokens: number
+  costYuan: number
+}
+
+export interface UsageSummary {
+  range: { from: string; to: string }
+  totals: UsageTotals
+  byModel: ModelUsageRow[]
+  byConversation: ConversationUsageRow[]
+}
+
+/** GET /api/usage/summary?from=yyyy-MM-dd&to=yyyy-MM-dd（默认近 30 天） */
+export async function getUsageSummary(from?: string, to?: string): Promise<UsageSummary> {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const qs = params.toString()
+  return api(`/api/usage/summary${qs ? '?' + qs : ''}`)
+}
+
 /**
  * 流式对话（SSE）：POST /api/chat/stream
  *
  * 服务端逐 token 推送 text/event-stream，这里用 fetch + ReadableStream
  * 手动解析 SSE（EventSource 不支持 POST 和自定义请求头）。
  *
- * @param onToken 每收到一个 token 片段回调
- * @param signal  AbortSignal，用于中断生成
+ * 事件类型：
+ *  - 默认事件：token 片段 → onToken
+ *  - event: tool/rag/usage：trace 事件 → onTool/onRag/onUsage
+ *  - event: memory / data:[DONE]：服务端内部处理/结束标记，不到前端
+ *
+ * @param handlers.onToken   每收到一个 token 片段回调
+ * @param handlers.signal    AbortSignal，用于中断生成
+ * @param handlers.onTool    工具调用事件
+ * @param handlers.onRag     知识召回事件
+ * @param handlers.onUsage   回合用量事件
+ * @param handlers.onTraceId 服务端回显的 traceId
  */
 export async function streamChat(
   message: string,
   conversationId: number,
-  handlers: { onToken: (token: string) => void; signal?: AbortSignal },
+  handlers: {
+    onToken: (token: string) => void
+    signal?: AbortSignal
+    onTool?: (tool: ToolTrace) => void
+    onRag?: (rag: RagTrace) => void
+    onUsage?: (usage: UsageTrace) => void
+    onReset?: () => void
+    onTraceId?: (traceId: string) => void
+  },
 ): Promise<void> {
+  // 前端生成 traceId 随头上送，便于请求失败时也能与服务端日志对账
+  const traceId = crypto.randomUUID()
   let res: Response
   try {
     res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Trace-Id': traceId,
         ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}),
       },
       body: JSON.stringify({ message, conversationId }),
@@ -220,14 +334,42 @@ export async function streamChat(
     throw new ApiError(data.message || `请求失败 (${res.status})`, res.status)
   }
 
+  // 优先采用响应头回显的 traceId（通常与上送一致），兜底用本地生成的
+  handlers.onTraceId?.(res.headers.get('x-trace-id') || traceId)
+
   const reader = res.body.getReader()
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
 
+  const dispatch = (eventName: string | null, data: string) => {
+    if (data === '[DONE]') return
+    if (eventName === 'tool') {
+      try { handlers.onTool?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
+      return
+    }
+    if (eventName === 'rag') {
+      try { handlers.onRag?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
+      return
+    }
+    if (eventName === 'usage') {
+      try { handlers.onUsage?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
+      return
+    }
+    if (eventName === 'trace-reset') {
+      // agent 主模型失败、备用模型重放：清空本轮已显示的 trace
+      handlers.onReset?.()
+      return
+    }
+    if (eventName === null) {
+      handlers.onToken(data)
+    }
+    // memory 等其它命名事件不到前端，忽略
+  }
+
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
-    // 统一换行，按 SSE 规范：空行分隔事件，data: 开头为数据行
+    // 统一换行，按 SSE 规范：空行分隔事件，event: 声明类型，data: 为数据行
     buffer += decoder.decode(value, { stream: true })
     buffer = buffer.replace(/\r\n/g, '\n')
 
@@ -237,16 +379,16 @@ export async function streamChat(
       buffer = buffer.slice(sep + 2)
 
       const dataLines: string[] = []
+      let eventName: string | null = null
       for (const line of rawEvent.split('\n')) {
-        if (line.startsWith('data:')) {
+        if (line.startsWith('event:')) {
+          eventName = line.slice(6).replace(/^ +/, '')
+        } else if (line.startsWith('data:')) {
           dataLines.push(line.slice(5).replace(/^ /, ''))
         }
       }
       if (dataLines.length === 0) continue
-
-      const data = dataLines.join('\n')
-      if (data === '[DONE]') return
-      handlers.onToken(data)
+      dispatch(eventName, dataLines.join('\n'))
     }
   }
 }

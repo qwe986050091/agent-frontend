@@ -6,8 +6,10 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import { useSearchParams } from 'react-router-dom'
-import { api, streamChat } from '../api'
+import { api, streamChat, type RagTrace, type ToolTrace, type UsageTrace } from '../api'
 import { useAuth } from '../auth'
+import { TracePanels, TraceFooter } from '../components/TracePanels'
+import HistoricalTrace from '../components/HistoricalTrace'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 const { TextArea } = Input
@@ -15,6 +17,11 @@ const { TextArea } = Input
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  /** 全链路 traceId（历史消息由 history 接口返回；实时流由响应头返回） */
+  traceId?: string
+  tools?: ToolTrace[]
+  recalls?: RagTrace[]
+  usage?: UsageTrace & { costYuan?: number }
 }
 
 interface Skill {
@@ -96,9 +103,22 @@ export default function ChatPage() {
 
     const controller = new AbortController()
     abortRef.current = controller
+
+    /** 不可变更新最后一条助手消息 */
+    const patchLast = (patch: Partial<Message>) =>
+      setMessages((m) => {
+        const copy = [...m]
+        const last = copy[copy.length - 1]
+        if (last && last.role === 'assistant') {
+          copy[copy.length - 1] = { ...last, ...patch }
+        }
+        return copy
+      })
+
     try {
       await streamChat(text, activeConversationId, {
         signal: controller.signal,
+        onTraceId: (id) => patchLast({ traceId: id }),
         onToken: (token) =>
           setMessages((m) => {
             const copy = [...m]
@@ -108,6 +128,26 @@ export default function ChatPage() {
             }
             return copy
           }),
+        onTool: (tool) =>
+          setMessages((m) => {
+            const copy = [...m]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, tools: [...(last.tools || []), tool] }
+            }
+            return copy
+          }),
+        onRag: (rag) =>
+          setMessages((m) => {
+            const copy = [...m]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = { ...last, recalls: [...(last.recalls || []), rag] }
+            }
+            return copy
+          }),
+        onUsage: (usage) => patchLast({ usage }),
+        onReset: () => patchLast({ tools: [], recalls: [], usage: undefined }),
       })
     } catch (err: any) {
       // 用户主动停止：保留已生成内容，不弹错误
@@ -234,19 +274,28 @@ export default function ChatPage() {
                 </div>
               )
             }
+            const hasLiveTrace = (m.tools?.length || 0) > 0 || (m.recalls?.length || 0) > 0
             return (
               <div key={i} className="chat-row assistant">
                 <img className="chat-avatar" src={assistantAvatar} alt="助手" />
-                {streaming && !m.content ? (
+                {streaming && !m.content && !hasLiveTrace ? (
                   <span className="chat-thinking">
                     <Spin size="small" /> 思考中...
                   </span>
                 ) : (
                   <div className="chat-bubble-assistant">
-                    <pre className="chat-text">
-                      {m.content}
-                      {streaming ? <span className="chat-cursor" /> : null}
-                    </pre>
+                    <TracePanels tools={m.tools} recalls={m.recalls} />
+                    {m.content && (
+                      <pre className="chat-text">
+                        {m.content}
+                        {streaming ? <span className="chat-cursor" /> : null}
+                      </pre>
+                    )}
+                    {/* 实时 trace 已在上方渲染；历史消息（无实时数据但有 traceId）懒加载回看 */}
+                    {!streaming && !hasLiveTrace && m.traceId && (
+                      <HistoricalTrace traceId={m.traceId} />
+                    )}
+                    {(hasLiveTrace || m.usage) && <TraceFooter usage={m.usage} traceId={m.traceId} />}
                   </div>
                 )}
               </div>
