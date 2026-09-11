@@ -89,15 +89,32 @@
 
 ## P2 — 可观测性与运营
 
-- [ ] **10. 全链路可观测**
-  - 现状：仅 `ReActLoggerListener` 打印控制台日志
-  - 动作：
-    - [ ] 10.1 全链路 traceId（frontend → backend → agent → LLM → 工具），日志可串联
-    - [ ] 10.2 Micrometer + Prometheus 指标：延迟、QPS、错误率、工具成功率、RAG 命中率
-    - [ ] 10.3 **Token 用量与成本统计**（按用户/会话/模型记录，可出账单）
-    - [ ] 10.4 工具调用记录、RAG 召回记录落库审计
-    - [ ] 10.5 前端可视化：思考过程 / 工具调用 / 知识召回折叠面板（类 ChatGPT、Dify trace）
-  - 验收：一次请求能用 traceId 拼出完整链路；能查到每用户 token 消耗
+- [x] **10. 全链路可观测** ✅ 2026-09-11 完成（生产部署+线上实测）
+  - 现状（改造后）：
+    - [x] 10.1 全链路 traceId：前端 UUID 上送 X-Trace-Id，两服务 TraceMdcFilter 落 MDC（[%X{traceId}] 日志格式），
+      agent 经 HTTP 头透传，agent/backend journal 同 id 可 grep；线程池交接 TraceMdcFilter.wrapWithMdc；
+      agent SSE 工作线程 ThreadLocal finally 清理不串号
+    - [x] 10.2 指标（actuator + micrometer-registry-prometheus，独立管理端口 18080/18081 绑 127.0.0.1）：
+      agent chat/llm(tokens/时长) /tool/rag(命中/片段) /sse.gauge；backend chat/agent.http/sse/
+      cb.state/failure_rate；含工具成功率、RAG 命中率；后续可自行抓 Prometheus（未装 Grafana）
+    - [x] 10.3 Token 用量与成本：DeepSeek 流式 include_usage 经 TraceAwareStreamingChatModel
+      （流式回调跨线程，ThreadLocal 失效故用请求级装饰器显式采集）聚合真实 input/output/轮次/模型；
+      llm_usage_record 落库（traceId 唯一幂等、取消行 cancelled=1、fallback 标记）；billing.models
+      yml 配 DeepSeek 2026-09 官方单价（deepseek-flash 1/2 元/百万等，未知模型 WARN 记 0）；
+      GET /api/usage/summary 按时间/模型/会话聚合；PC「用量统计」页
+    - [x] 10.4 审计落库：tool_call_record（参数/结果预览/成败/耗时，id 配对+completedToolIds 去重
+      解决多轮历史结果错配）、rag_recall_record（query/来源/文本/score，miss 也落 query-only 行）；
+      GET /api/chat/traces/{traceId} 归属校验回查
+    - [x] 10.5 PC 可视化：助手气泡「知识召回 N/工具调用 N」折叠面板（来源、相似度%、参数、结果、耗时、
+      成败图标）+ 底栏 token/费用/traceId 复制；历史消息「查看思考过程」懒加载（缓存/404 空态）；
+      用量统计页（RangePicker+卡片+按模型/按会话表）；fallback 重放经 event:trace-reset 防重复
+    - 工程：评审 R1(4major)→R2→R3 三轮闭环；新增 event: trace-reset 协议；
+      agent_mobile 零改动（react-native-sse 只收默认事件，自动兼容）
+    - 部署：schema 三新表自动建 + chat_message 手工 ALTER trace_id（生产已执行，2026-09-11 前旧消息为 NULL）；
+      冒烟测试用户/数据已清理；回滚 jar 备份 agent*.bak-20260911-*、web.bak-20260911-005728
+  - 验收（线上实测）：SSE 逐事件 tool 结果 20/60/12 正确、usage 4181 token 费用复算一致；
+    traceId 跨两服务 grep 到；同 traceId 用量仅 1 行；越权 trace 404；用量接口对账一致；
+    管理端口外部不可达（ss 仅 127.0.0.1）
 
 - [ ] **11. 反馈与评估闭环**
   - [ ] 11.1 答案点赞/点踩 + bad case 收集落库

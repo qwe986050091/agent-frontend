@@ -16,8 +16,13 @@ description: "Agent 项目云端发布技能：前端静态站部署到旧阿里
 | agent 服务（8080，LangChain4j+RAG） | 新腾讯云 82.156.243.32 | `new` | jar：`/opt/agent/agent.jar`，systemd 服务名 `agent`，运行用户 agent |
 | backend 服务（8081，业务后端） | 新腾讯云 82.156.243.32 | `new` | jar：`/opt/agent/agent-backend.jar`，systemd 服务名 `agent-backend` |
 | RAG 向量快照 | 新服务器 | `new` | `/opt/agent/data/rag-embeddings.json`（agent 自动维护，勿手改） |
+| 备用主机（2026-09-10 新增，**暂未部署任何服务**） | 京东云轻量 117.72.119.245（2c4g/60G，Ubuntu 24.04.2 LTS，hostname lavm-15vomr4427） | `jd` | 暂无（root 直接登录） |
 
-- SSH 配置已在 `C:\Users\zhanglingfeng\.ssh\config` 定义别名 `old`/`new`（密钥 D:\code\zlf_ali.pem / D:\code\zlf.pem）。**所有 ssh/scp 一律用别名**，用 `root@IP` 直连会因不匹配 Host 规则导致 publickey 拒绝。
+- SSH 配置已在 `C:\Users\zhanglingfeng\.ssh\config` 定义别名 `old`/`new`/`jd`（密钥 D:\code\zlf_ali.pem / D:\code\zlf.pem / D:\code\zlf_jd.pem，模板同步在 `D:\code\deploy\ssh-config`）。**所有 ssh/scp 一律用别名**，用 `root@IP` 直连会因不匹配 Host 规则导致 publickey 拒绝。
+- jd 已于 2026-09-10 打通：公钥经 root 密码登录一次写入 `/root/.ssh/authorized_keys`，`ssh -o BatchMode=yes jd "hostname"` 验证通过；主机指纹（ED25519 SHA256:ZzS3L/fa4kbpqQgBm25LN+8NvDnc7bmle9FI7f+3zEw）已入 known_hosts。
+- 新 .pem 首次使用若报 `UNPROTECTED PRIVATE KEY FILE`（D:\code 下新建/拷贝的密钥常带 Authenticated Users 权限），修复 ACL 后再连：
+  `icacls D:\code\zlf_jd.pem /inheritance:r; icacls D:\code\zlf_jd.pem /remove "NT AUTHORITY\Authenticated Users" "BUILTIN\Users"; icacls D:\code\zlf_jd.pem /grant "$($env:USERNAME):(R)"`（最终 ACL 应为 当前用户:(R) + Administrators:(F) + SYSTEM:(F)，与 zlf.pem 一致）。
+- 诊断 SSH 用 `ssh -v -o BatchMode=yes jd`（BatchMode 禁止密码交互，避免后台挂死在密码提示）；首次连新主机可 `ssh -o StrictHostKeyChecking=accept-new` 自动录入指纹。
 - 若 SSH 连接超时：阿里云安全组 22 端口有 IP 白名单，需提醒用户把当前公网 IP 加入白名单。
 
 ## Windows/PowerShell 环境坑（必守）
