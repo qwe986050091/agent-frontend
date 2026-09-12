@@ -230,6 +230,45 @@ export async function getTrace(traceId: string): Promise<TraceDetail> {
   return api(`/api/chat/traces/${encodeURIComponent(traceId)}`)
 }
 
+// ==================== 高危工具人工确认（P1-6） ====================
+
+/** agent 经 SSE approval-request 事件下发的审批请求 */
+export interface ApprovalRequestData {
+  approvalId: string
+  /** LangChain4j 工具名（MCP 工具为原始名） */
+  tool: string
+  /** low / medium / high */
+  riskLevel: string
+  /** 中文动作标题（如「发起 HTTP 请求」） */
+  title: string
+  /** 参数预览（≤500 字符） */
+  argsPreview: string
+  traceId?: string
+  conversationId?: number
+}
+
+/**
+ * 提交高危工具审批决策。
+ * POST /api/chat/approvals/{approvalId}/decision
+ * @param remember 批准且勾选「本次会话始终允许」时传 true（backend 写 Redis 会话授权）
+ */
+export async function decideApproval(
+  approvalId: string,
+  approved: boolean,
+  remember = false,
+): Promise<{
+  approvalId: string
+  state: string
+  tool: string
+  conversationId: number
+  remember: boolean
+}> {
+  return api(`/api/chat/approvals/${encodeURIComponent(approvalId)}/decision`, {
+    method: 'POST',
+    body: { approved, remember },
+  })
+}
+
 // ==================== 用量统计（P2-10） ====================
 
 export interface UsageTotals {
@@ -289,6 +328,7 @@ export async function getUsageSummary(from?: string, to?: string): Promise<Usage
  * @param handlers.onTool    工具调用事件
  * @param handlers.onRag     知识召回事件
  * @param handlers.onUsage   回合用量事件
+ * @param handlers.onApproval 高危工具审批请求（需弹确认窗，决策走 decideApproval）
  * @param handlers.onTraceId 服务端回显的 traceId
  */
 export async function streamChat(
@@ -301,6 +341,7 @@ export async function streamChat(
     onRag?: (rag: RagTrace) => void
     onUsage?: (usage: UsageTrace) => void
     onReset?: () => void
+    onApproval?: (approval: ApprovalRequestData) => void
     onTraceId?: (traceId: string) => void
   },
 ): Promise<void> {
@@ -358,6 +399,15 @@ export async function streamChat(
     if (eventName === 'trace-reset') {
       // agent 主模型失败、备用模型重放：清空本轮已显示的 trace
       handlers.onReset?.()
+      return
+    }
+    if (eventName === 'approval-request') {
+      // 高危工具执行前的人工确认请求：弹窗，决策结果经 decideApproval 独立回传
+      try {
+        handlers.onApproval?.(JSON.parse(data))
+      } catch {
+        /* 忽略坏事件 */
+      }
       return
     }
     if (eventName === null) {

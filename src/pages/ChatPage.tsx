@@ -1,13 +1,24 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Input, Spin, Tooltip, App as AntdApp } from 'antd'
+import { App as AntdApp, Checkbox, Input, Modal, Space, Spin, Tag, Tooltip } from 'antd'
 import {
   ArrowUpOutlined,
   StopOutlined,
   ToolOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
-import { useSearchParams } from 'react-router-dom'
-import { api, streamChat, type RagTrace, type ToolTrace, type UsageTrace } from '../api'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  api,
+  createConversation,
+  decideApproval,
+  streamChat,
+  type ApprovalRequestData,
+  type RagTrace,
+  type ToolTrace,
+  type UsageTrace,
+} from '../api'
 import { useAuth } from '../auth'
+import { useConversations } from '../layouts/MainLayout'
 import { TracePanels, TraceFooter } from '../components/TracePanels'
 import HistoricalTrace from '../components/HistoricalTrace'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
@@ -40,25 +51,55 @@ function greetingOf(): string {
   return '晚上好'
 }
 
+/** 用首条消息生成会话标题：折叠空白，超长截断（ChatGPT 风格；后端标题上限 200 字） */
+function titleFromMessage(text: string): string {
+  const oneLine = text.replace(/\s+/g, ' ').trim()
+  return oneLine.length > 30 ? `${oneLine.slice(0, 30)}…` : oneLine
+}
+
 export default function ChatPage() {
   const { user } = useAuth()
   const { message } = AntdApp.useApp()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { addConversation } = useConversations()
 
-  // 当前会话 id 由 MainLayout 侧边栏通过 URL query 传入；缺省 0（默认/历史会话）
-  const activeConversationId = Number(searchParams.get('conversationId') || 0)
+  // 会话 id 由 MainLayout 侧边栏通过 URL query 传入：
+  // 无参数 = 草稿新会话（null，尚未落库）；0 = 默认/历史会话；N > 0 = 真实会话
+  const convParam = searchParams.get('conversationId')
+  const parsedConvId = convParam === null ? null : Number(convParam)
+  const activeConversationId =
+    parsedConvId !== null && Number.isFinite(parsedConvId) && parsedConvId >= 0 ? parsedConvId : null
 
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(activeConversationId !== null)
   const [mountedSkills, setMountedSkills] = useState<Skill[]>([])
   const listRef = useRef<HTMLDivElement>(null)
   // 当前流式请求的 AbortController：点"停止"时 abort，前端断开 → 后端/agent 逐级取消生成
   const abortRef = useRef<AbortController | null>(null)
+  // 草稿态首条消息刚建会话并 replace 到新 id 时，跳过一次历史重载（乐观气泡已在屏上）
+  const skipHistoryLoadRef = useRef<number | null>(null)
 
-  // 进入页面 / 切换会话时加载对应历史
+  // 高危工具审批：SSE 推来的审批请求排队，单弹窗依次处理
+  const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestData[]>([])
+  const [approvalDeciding, setApprovalDeciding] = useState(false)
+  const [rememberGrant, setRememberGrant] = useState(false)
+  const currentApproval = approvalQueue[0]
+
+  // 进入页面 / 切换会话时加载对应历史；草稿态直接是空白欢迎页，不请求历史
   useEffect(() => {
+    if (activeConversationId === null) {
+      setMessages([])
+      setHistoryLoading(false)
+      return
+    }
+    if (skipHistoryLoadRef.current === activeConversationId) {
+      skipHistoryLoadRef.current = null
+      setHistoryLoading(false)
+      return
+    }
     loadHistory(activeConversationId)
   }, [activeConversationId])
 
@@ -96,6 +137,25 @@ export default function ChatPage() {
     const text = input.trim()
     if (!text || loading) return
 
+    let conversationId = activeConversationId
+
+    // 草稿态：点击"新聊天"时未写库，直到首条消息真正发出才创建会话
+    if (conversationId === null) {
+      setLoading(true)
+      try {
+        const created = await createConversation(titleFromMessage(text))
+        conversationId = created.id
+        // 侧边栏即时置顶出现新会话；replace 换 URL（刷新/中断后仍在该会话）
+        addConversation(created)
+        skipHistoryLoadRef.current = created.id
+        navigate(`/chat?conversationId=${created.id}`, { replace: true })
+      } catch (err: any) {
+        message.error(err.message)
+        setLoading(false)
+        return
+      }
+    }
+
     // 用户消息 + 占位的空 AI 消息（token 逐段追加进去）
     setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
     setInput('')
@@ -116,7 +176,7 @@ export default function ChatPage() {
       })
 
     try {
-      await streamChat(text, activeConversationId, {
+      await streamChat(text, conversationId, {
         signal: controller.signal,
         onTraceId: (id) => patchLast({ traceId: id }),
         onToken: (token) =>
@@ -148,6 +208,8 @@ export default function ChatPage() {
           }),
         onUsage: (usage) => patchLast({ usage }),
         onReset: () => patchLast({ tools: [], recalls: [], usage: undefined }),
+        onApproval: (approval) =>
+          setApprovalQueue((q) => [...q, approval]),
       })
     } catch (err: any) {
       // 用户主动停止：保留已生成内容，不弹错误
@@ -167,6 +229,26 @@ export default function ChatPage() {
     } finally {
       abortRef.current = null
       setLoading(false)
+      // 流结束清理未决审批（断连/取消时 agent 侧会自动拒绝）
+      setApprovalQueue([])
+      setRememberGrant(false)
+      setApprovalDeciding(false)
+    }
+  }
+
+  /** 提交高危工具审批决策：拒绝/允许（可选「本次会话始终允许」） */
+  async function decideCurrentApproval(approved: boolean) {
+    const approval = currentApproval
+    if (!approval || approvalDeciding) return
+    setApprovalDeciding(true)
+    try {
+      await decideApproval(approval.approvalId, approved, approved && rememberGrant)
+    } catch (err: any) {
+      message.error(`审批提交失败：${err.message}（服务端将按超时自动拒绝）`)
+    } finally {
+      setApprovalDeciding(false)
+      setRememberGrant(false)
+      setApprovalQueue((q) => q.slice(1))
     }
   }
 
@@ -229,6 +311,51 @@ export default function ChatPage() {
     </div>
   )
 
+  // ============ 高危工具审批弹窗（SSE 推来请求，决策走独立接口） ============
+  const riskLevel = currentApproval?.riskLevel
+  const riskColor = riskLevel === 'high' ? 'red' : riskLevel === 'medium' ? 'orange' : 'blue'
+  const riskText = riskLevel === 'high' ? '高危' : riskLevel === 'medium' ? '中危' : '低危'
+  const approvalModal = (
+    <Modal
+      open={!!currentApproval}
+      title={
+        <Space>
+          <WarningOutlined style={{ color: '#d4380d' }} />
+          {currentApproval?.title || '高危操作确认'}
+        </Space>
+      }
+      okText="允许执行"
+      cancelText="拒绝"
+      confirmLoading={approvalDeciding}
+      cancelButtonProps={{ disabled: approvalDeciding }}
+      maskClosable={false}
+      keyboard={false}
+      width={560}
+      okButtonProps={{ danger: riskLevel === 'high' }}
+      onOk={() => void decideCurrentApproval(true)}
+      onCancel={() => void decideCurrentApproval(false)}
+    >
+      {currentApproval && (
+        <div className="approval-body">
+          <p className="approval-desc">
+            AI 助手即将执行外部操作，请核对以下工具与参数；拒绝后该操作不会执行。
+          </p>
+          <Space size={8} wrap style={{ marginBottom: 10 }}>
+            <Tag color={riskColor}>{riskText}</Tag>
+            <code className="approval-tool">{currentApproval.tool}</code>
+          </Space>
+          <pre className="approval-args">{currentApproval.argsPreview || '（无参数）'}</pre>
+          <Checkbox
+            checked={rememberGrant}
+            onChange={(e) => setRememberGrant(e.target.checked)}
+          >
+            本次会话始终允许此工具（同一会话后续调用不再询问）
+          </Checkbox>
+        </div>
+      )}
+    </Modal>
+  )
+
   // ============ 空态：居中问候 + 输入框 ============
   if (historyLoading) {
     return (
@@ -254,6 +381,7 @@ export default function ChatPage() {
           <p className="chat-welcome-sub">温柔而高效地和你对话，写东西、查资料都可以交给我</p>
           {composer}
         </div>
+        {approvalModal}
       </div>
     )
   }
@@ -305,6 +433,7 @@ export default function ChatPage() {
       </div>
 
       {composer}
+      {approvalModal}
     </div>
   )
 }

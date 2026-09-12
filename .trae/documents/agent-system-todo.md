@@ -50,15 +50,14 @@
 
 ## P1 — Agent 能力短板
 
-- [ ] **6. 扩充工具生态**
-  - 现状：`ToolRegistry` 仅 calculatorTools、dateTimeTools 两个玩具工具；Skill 只能引用编译期内置类
-  - 动作（按需选型）：
-    - [ ] 6.1 联网搜索 / 网页抓取工具（DeepSeek 自身无联网，补时效性）
-    - [ ] 6.2 通用 HTTP 请求工具（调第三方 API）
-    - [ ] 6.3 代码执行沙箱（Python/Shell，容器隔离，限制 CPU/内存/网络/时长）
-    - [ ] 6.4 **MCP 协议支持**（接入外部工具生态的事实标准，收益最大）
-  - 安全前提：危险工具（HTTP/执行命令）必须配权限控制 + 人工确认（human-in-the-loop）
-  - 验收：新工具可通过 Skill 机制挂载；高危操作前端弹确认后才执行
+- [ ] **6. 扩充工具生态**  <!-- 2026-09-12 21:10 三端已部署生产（agent/backend jar + 前端），57 单测；Bing 出网 200/0.32s，审批接口 401/404/400 实测；仅剩用户侧弹窗全链路实测后勾选；回滚 jar：*.bak-20260912 -->
+  - 原现状：`ToolRegistry` 仅 calculatorTools、dateTimeTools 两个玩具工具；Skill 只能引用编译期内置类
+  - [ ] 6.1 联网搜索 / 网页抓取工具（DeepSeek 自身无联网，补时效性）✅ 内置技能 `web`：免 Key 搜索（cn.bing.com→DuckDuckGo 顺序回退，jsoup 解析）+ fetchWebPage 正文提取；搜索免确认、抓取逐次确认；SSRF 防护（私网/元数据/IPv6/逐跳重定向/2MB 上限）
+  - [ ] 6.2 通用 HTTP 请求工具（调第三方 API）✅ 内置技能 `http-api`：GET/POST/PUT/PATCH/DELETE 白名单、不支持自定义请求头、逐次人工确认
+  - [ ] 6.3 代码执行沙箱（Python/Shell，容器隔离，限制 CPU/内存/网络/时长）——本期跳过（生产机无 Docker，单独立项）
+  - [ ] 6.4 **MCP 协议支持**（接入外部工具生态的事实标准，收益最大）✅ langchain4j-mcp 1.17.2-beta27；`agent.mcp.servers[]` 配置（stdio/Streamable HTTP），每个 server 动态内置技能 `mcp:{name}`，默认空配置休眠；approval=confirm（默认，走同一审批流）/auto
+  - 安全前提：危险工具（HTTP/执行命令）必须配权限控制 + 人工确认（human-in-the-loop）✅ 已落地：SSE `approval-request` + POST /api/agent/approvals/{id}/decision（X-Agent-Token + userId 归属校验，404/409）；拒绝/60s 超时/断连全部安全收敛；agent 保持无状态，「本会话始终允许」存 backend Redis（tool:grant:{user}:{conv}，TTL 7 天）随 payload.allowedTools 下发；PC 端 Modal 确认，App 端安全降级（超时拒绝）
+  - 验收：新工具可通过 Skill 机制挂载；高危操作前端弹确认后才执行 —— 待三端部署后线上实测（搜索源国内可达性、审批全链路、MCP 实接名单）；规格见 .trae/specs/p1-6-tools-ecosystem/
 
 - [x] **7. Agent 循环护栏** ✅ 2026-09-09 完成（7.1-7.3 线上实测）
   - [x] 7.1 工具调用轮次上限：`AiServices.builder().maxToolCallingRoundTrips(n)`，参数 `agent.loop.max-tool-round-trips`（默认 15，原库默认 100 太高）；超限（同步/流式）收敛为友好提示"已达到最大工具调用轮次，已自动中止以避免死循环"而非 500
