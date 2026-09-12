@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { Avatar, Dropdown, Input, Modal, Popconfirm, App as AntdApp } from 'antd'
 import {
   AppstoreOutlined,
@@ -16,7 +16,6 @@ import type { ReactNode } from 'react'
 import { useAuth } from '../auth'
 import {
   listConversations,
-  createConversation,
   renameConversation,
   deleteConversation,
   type Conversation,
@@ -48,6 +47,27 @@ const FIXED_ITEMS: Array<{
 const SCROLL_NAV = NAV_ITEMS
 
 /**
+ * 暴露给子路由（ChatPage）的会话状态：
+ * 草稿态首条消息发出后由 ChatPage 创建会话，通过 addConversation 即时置顶加入侧边栏，
+ * 无需整列表重新拉取，也保证当前新会话的选中态不丢。
+ */
+export interface ConversationContextValue {
+  conversations: Conversation[]
+  /** 当前激活会话 id；null=未入库的草稿新会话，0=默认/历史会话 */
+  activeConversationId: number | null
+  addConversation: (conv: Conversation) => void
+}
+
+const ConversationContext = createContext<ConversationContextValue | null>(null)
+
+/** 子路由读取会话列表状态（必须在 MainLayout 的 <Outlet/> 内使用） */
+export function useConversations(): ConversationContextValue {
+  const ctx = useContext(ConversationContext)
+  if (!ctx) throw new Error('useConversations 必须在 MainLayout 内使用')
+  return ctx
+}
+
+/**
  * 登录后的主框架：浅色极简侧边栏 + 内容区（ChatGPT 风格）
  *
  * 会话列表挂在侧边栏导航下方（仅 /chat 路由显示），与 ChatGPT 一致：
@@ -66,11 +86,15 @@ export default function MainLayout() {
 
   const displayName = user?.nickname || user?.username || '用户'
 
-  /** 当前激活会话 id（来自 URL query），缺省 0（默认/历史会话） */
-  const activeConversationId = useMemo(() => {
+  /**
+   * 当前激活会话 id（来自 URL query）：
+   * 无参数 = 草稿新会话（null，不落库）；0 = 默认/历史会话；N > 0 = 真实会话
+   */
+  const activeConversationId = useMemo<number | null>(() => {
     const raw = new URLSearchParams(location.search).get('conversationId')
-    const n = raw ? Number(raw) : NaN
-    return Number.isFinite(n) && n > 0 ? n : 0
+    if (raw === null) return null
+    const n = Number(raw)
+    return Number.isFinite(n) && n >= 0 ? n : null
   }, [location.search])
 
   async function handleLogout() {
@@ -78,7 +102,11 @@ export default function MainLayout() {
     navigate('/login')
   }
 
-  /** 进入主框架即加载会话列表（所有页面侧边栏常驻显示）；无会话自动新建一个 */
+  /**
+   * 进入主框架即加载会话列表（所有页面侧边栏常驻显示）。
+   * 不再提前建空会话：URL 未指定会话且存在历史时落到最近一条；一个会话都没有时
+   * 保持空白草稿态，等用户真正发出第一条消息时再创建（见 ChatPage.send）。
+   */
   useEffect(() => {
     loadConversations()
   }, [])
@@ -86,15 +114,10 @@ export default function MainLayout() {
   async function loadConversations() {
     try {
       const list = await listConversations()
-      if (list.length === 0) {
-        const created = await createConversation('新对话')
-        setConversations([created])
-        navigate(`/chat?conversationId=${created.id}`, { replace: true })
-      } else {
-        setConversations(list)
-        if (!activeConversationId) {
-          navigate(`/chat?conversationId=${list[0].id}`, { replace: true })
-        }
+      setConversations(list)
+      const hasConvParam = new URLSearchParams(location.search).has('conversationId')
+      if (!hasConvParam && list.length > 0) {
+        navigate(`/chat?conversationId=${list[0].id}`, { replace: true })
       }
     } catch (err: any) {
       message.error(err.message)
@@ -106,15 +129,17 @@ export default function MainLayout() {
     navigate(`/chat?conversationId=${id}`)
   }
 
-  /** 新建会话 */
-  async function handleCreate() {
-    try {
-      const created = await createConversation('新对话')
-      setConversations((list) => [created, ...list])
-      navigate(`/chat?conversationId=${created.id}`)
-    } catch (err: any) {
-      message.error(err.message)
-    }
+  /**
+   * 新建会话：只进入空白草稿态（URL 不带 conversationId），不写库；
+   * 会话行在首条消息真正发出时才由 ChatPage 创建并回调 addConversation。
+   */
+  function handleCreate() {
+    navigate('/chat')
+  }
+
+  /** ChatPage 首条消息创建会话后调用：置顶加入列表（已存在则不重复添加） */
+  function addConversation(conv: Conversation) {
+    setConversations((list) => (list.some((c) => c.id === conv.id) ? list : [conv, ...list]))
   }
 
   /** 提交重命名 */
@@ -130,7 +155,7 @@ export default function MainLayout() {
     }
   }
 
-  /** 删除会话：级联删除消息；若删的是当前会话则切到剩余第一个 */
+  /** 删除会话：级联删除消息；若删的是当前会话则切到剩余第一个，没有则进草稿态 */
   async function handleDelete(conv: Conversation) {
     try {
       await deleteConversation(conv.id)
@@ -145,6 +170,12 @@ export default function MainLayout() {
       message.error(err.message)
     }
   }
+
+  /** 暴露给 ChatPage：首条消息创建会话后即时更新侧边栏 */
+  const conversationCtx = useMemo<ConversationContextValue>(
+    () => ({ conversations, activeConversationId, addConversation }),
+    [conversations, activeConversationId],
+  )
 
   return (
     <div className="app-shell">
@@ -183,7 +214,7 @@ export default function MainLayout() {
                   }`}
                   onClick={() => {
                     if (item.action === 'new-chat') {
-                      void handleCreate()
+                      handleCreate()
                     } else {
                       navigate(item.key)
                     }
@@ -285,7 +316,9 @@ export default function MainLayout() {
             <MenuUnfoldOutlined />
           </button>
         )}
-        <Outlet />
+        <ConversationContext.Provider value={conversationCtx}>
+          <Outlet />
+        </ConversationContext.Provider>
       </main>
 
       {/* 桌宠小助手：全局悬浮，支持拖拽 / 跟随 / 打盹 */}
