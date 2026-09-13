@@ -8,6 +8,7 @@ import ChatPage from './pages/ChatPage'
 import SkillsPage from './pages/SkillsPage'
 import KnowledgePage from './pages/KnowledgePage'
 import UsagePage from './pages/UsagePage'
+import FeedbackAdminPage from './pages/FeedbackAdminPage'
 
 /** 登录守卫：未登录跳转登录页 */
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/skills" element={<SkillsPage />} />
         <Route path="/usage" element={<UsagePage />} />
+        <Route path="/admin/feedback" element={<FeedbackAdminPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

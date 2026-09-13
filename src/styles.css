@@ -1367,8 +1367,8 @@ body {
   word-break: break-all;
 }
 .approval-args {
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: #f6f8fb;
+  border: 1px solid #eef1f6;
   border-radius: 8px;
   padding: 10px 12px;
   margin: 0 0 12px;
@@ -1376,7 +1376,147 @@ body {
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.6;
   color: #262626;
+}
+
+/* ===== P2-11.1 回答反馈（助手气泡下的赞/踩条） ===== */
+.feedback-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+}
+.feedback-bar .feedback-btn {
+  color: #98a1b2;
+  height: 26px;
+  padding: 0 7px;
+  font-size: 14px;
+}
+.feedback-bar .feedback-btn:hover:not(:disabled) {
+  color: #5b6b86;
+  background: #f2f5fb;
+}
+.feedback-bar .feedback-btn.active.up {
+  color: #389e0d;
+  background: #f0fbe8;
+}
+.feedback-bar .feedback-btn.active.down {
+  color: #cf1322;
+  background: #fff1f0;
+}
+.feedback-down-form {
+  width: 248px;
+}
+.feedback-reasons {
+  display: block;
+  margin-bottom: 8px;
+  max-height: 216px;
+  overflow-y: auto;
+}
+.feedback-reasons .ant-radio-wrapper {
+  font-size: 13px;
+  line-height: 1.9;
+}
+.feedback-comment {
+  margin-bottom: 8px;
+  font-size: 12.5px;
+}
+.feedback-down-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ===== P2-11.1 反馈管理（管理员后台） ===== */
+.feedback-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 24px 60px;
+}
+.feedback-header {
+  max-width: 1180px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.feedback-title {
+  margin: 0;
+  font-size: 20px;
+  color: #2c384c;
+}
+.feedback-cards {
+  max-width: 1180px;
+  margin: 0 auto 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.feedback-card {
+  border-radius: 12px;
+  border-color: var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+.feedback-reasons-card.ant-card .ant-card-body {
+  padding-top: 14px;
+  min-height: 78px;
+}
+.feedback-filter-card {
+  max-width: 1180px;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+  border-color: var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+.feedback-filter-card.ant-card .ant-card-body {
+  padding: 14px 16px;
+}
+.feedback-table {
+  max-width: 1180px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.feedback-detail {
+  padding: 6px 12px;
+  background: #fafbfd;
+}
+.feedback-detail-block {
+  margin-bottom: 10px;
+}
+.feedback-detail-label {
+  font-size: 12px;
+  color: #7a869a;
+  margin-bottom: 4px;
+}
+.feedback-detail-text {
+  margin: 0;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #eef1f6;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #2c384c;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.feedback-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #7a869a;
+}
+@media (max-width: 1100px) {
+  .feedback-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
