@@ -6,6 +6,8 @@ const USER_KEY = 'agent_user'
 export interface AuthUser {
   username: string
   nickname: string
+  /** 管理员（白名单驱动，仅控制后台菜单显隐；接口仍由服务端 AdminInterceptor 兜底 403） */
+  admin?: boolean
 }
 
 export function getToken(): string {
@@ -310,6 +312,113 @@ export async function getUsageSummary(from?: string, to?: string): Promise<Usage
   if (to) params.set('to', to)
   const qs = params.toString()
   return api(`/api/usage/summary${qs ? '?' + qs : ''}`)
+}
+
+// ==================== 回答反馈（P2-11.1） ====================
+
+/** 某条助手消息上的反馈状态（history 接口附带） */
+export interface FeedbackInfo {
+  rating: number // 1=赞，-1=踩
+  reasonCode?: string | null
+  comment?: string | null
+}
+
+export interface FeedbackReason {
+  code: string
+  label: string
+}
+
+/** 点踩原因码字典（GET /api/feedback/reasons） */
+export async function getFeedbackReasons(): Promise<FeedbackReason[]> {
+  const data = await api<{ reasons: FeedbackReason[] }>('/api/feedback/reasons')
+  return data.reasons || []
+}
+
+/**
+ * 提交反馈。POST /api/feedback
+ * @param rating 1=赞，-1=踩，0=取消；重复点当前评价同样按取消处理
+ * @returns 提交后的有效评分（取消时为 0）
+ */
+export async function submitFeedback(
+  traceId: string,
+  rating: number,
+  reasonCode?: string,
+  comment?: string,
+): Promise<{ traceId: string; rating: number }> {
+  return api('/api/feedback', {
+    method: 'POST',
+    body: { traceId, rating, reasonCode, comment },
+  })
+}
+
+/** 管理后台反馈行（含问答富化） */
+export interface AdminFeedbackRow {
+  id: number
+  traceId: string
+  userId: string
+  conversationId: number
+  conversationTitle: string
+  rating: number
+  reasonCode?: string | null
+  reasonLabel?: string | null
+  comment?: string | null
+  question?: string | null
+  answer?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminFeedbackPage {
+  content: AdminFeedbackRow[]
+  page: number
+  size: number
+  total: number
+  totalPages: number
+}
+
+export interface FeedbackReasonStat {
+  reasonCode: string | null
+  reasonLabel: string | null
+  count: number
+}
+
+export interface FeedbackStats {
+  total: number
+  up: number
+  down: number
+  byReason: FeedbackReasonStat[]
+}
+
+export interface FeedbackListParams {
+  rating?: number // 1 / -1 / 不传
+  reason?: string
+  keyword?: string
+  from?: string // yyyy-MM-dd
+  to?: string
+  page?: number
+  size?: number
+}
+
+/** 管理员分页检索反馈（GET /api/admin/feedback） */
+export async function getAdminFeedback(params: FeedbackListParams = {}): Promise<AdminFeedbackPage> {
+  const qs = new URLSearchParams()
+  if (params.rating !== undefined) qs.set('rating', String(params.rating))
+  if (params.reason) qs.set('reason', params.reason)
+  if (params.keyword) qs.set('keyword', params.keyword)
+  if (params.from) qs.set('from', params.from)
+  if (params.to) qs.set('to', params.to)
+  qs.set('page', String(params.page ?? 0))
+  qs.set('size', String(params.size ?? 20))
+  return api(`/api/admin/feedback?${qs.toString()}`)
+}
+
+/** 管理员反馈统计（GET /api/admin/feedback/stats） */
+export async function getFeedbackStats(from?: string, to?: string): Promise<FeedbackStats> {
+  const qs = new URLSearchParams()
+  if (from) qs.set('from', from)
+  if (to) qs.set('to', to)
+  const s = qs.toString()
+  return api(`/api/admin/feedback/stats${s ? '?' + s : ''}`)
 }
 
 /**

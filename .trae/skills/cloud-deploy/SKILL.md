@@ -80,6 +80,23 @@ ssh new "journalctl -u agent --since '2 minutes ago' --no-pager | grep -iE 'erro
 验收标准：两个服务 `active`；8080/8081 健康检查 200；Nginx HTTPS `curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/api/health -H 'Host: api.zlfshop.xyz'` 为 200；日志无 ERROR。
 回滚：把 `/opt/agent/*.jar.bak-YYYYMMDD` 改回正式名并重启对应服务。
 
+## 流程三：代码沙箱环境（P1-6.3，仅涉及 agent，新机）
+
+agent jar 自带沙箱代码但**默认休眠**，上线沙箱能力时除了换 jar，还要在新机装一次环境（幂等，可重复跑）：
+
+```powershell
+# 三个脚本都在 agent 工程 deploy-test/ 下，先 scp 到 new:/root/ 再执行
+ssh new "bash /root/code-sandbox-setup.sh"     # 装 python3+numpy、部署 wrapper/sudoers、unit 注入开关并重启、校验工具注册
+ssh new "bash /root/code-sandbox-attacks.sh"   # 10 项隔离攻击用例，必须 PASS=10 FAIL=0
+ssh new "bash /root/code-sandbox-e2e.sh"       # 可选：临时用户全链路（挂载→SSE 审批→批准/拒绝），自动清库
+```
+
+- 换含沙箱改动的 agent jar 后，**backend 无需换 jar，但要重启一次**（启动时 syncBuiltinCatalog 收录新内置技能 code-runner 到 skill 表）。
+- setup 会自行重启 agent；同一天第二次替换 jar 时**不要再 `cp agent.jar agent.jar.bak-当天`**，避免覆盖上线前备份，直接 mv 替换即可。
+- 关键事实：新机 agent.service 以非 root 用户 `agent` 运行，走 `sudo -n /opt/agent-sandbox/run-sandbox`（sudoers 白名单仅此一条）；脚本目录 `/opt/agent-data/sandbox`。
+- OpenCloudOS 9 的 systemd-run **不支持 `--bind-read-only`**，wrapper 参数以仓库脚本为准，勿自行加回。
+- 回滚：功能级 = 从 unit 删 `AGENT_TOOLS_CODE_ENABLED`/`CODE_SANDBOX_DIR` 两行后重启（回休眠）；jar 级用当天 `.bak-YYYYMMDD`。
+
 ## 通用纪律
 
 - 只做本次发布所需的最小变更：**不动数据库、不删数据、不改 Nginx/系统配置**（除非本次需求明确要求）。

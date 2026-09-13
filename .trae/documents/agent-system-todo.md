@@ -54,7 +54,14 @@
   - 原现状：`ToolRegistry` 仅 calculatorTools、dateTimeTools 两个玩具工具；Skill 只能引用编译期内置类
   - [ ] 6.1 联网搜索 / 网页抓取工具（DeepSeek 自身无联网，补时效性）✅ 内置技能 `web`：免 Key 搜索（cn.bing.com→DuckDuckGo 顺序回退，jsoup 解析）+ fetchWebPage 正文提取；搜索免确认、抓取逐次确认；SSRF 防护（私网/元数据/IPv6/逐跳重定向/2MB 上限）
   - [ ] 6.2 通用 HTTP 请求工具（调第三方 API）✅ 内置技能 `http-api`：GET/POST/PUT/PATCH/DELETE 白名单、不支持自定义请求头、逐次人工确认
-  - [ ] 6.3 代码执行沙箱（Python/Shell，容器隔离，限制 CPU/内存/网络/时长）——本期跳过（生产机无 Docker，单独立项）
+  - [x] 6.3 代码执行沙箱（Python/Shell，容器隔离，限制 CPU/内存/网络/时长）✅ 2026-09-13 上线（生产实测通过）：**放弃容器路线改 systemd-run 原生沙箱**（OpenCloudOS 9 / systemd 255，免装 Docker），内置技能 `code-runner`，仅 Python（v1），默认 `agent.tools.code.enabled=false` 休眠（生产经 unit 注入 AGENT_TOOLS_CODE_ENABLED=true 开启）
+    - 落地：agent 新增 `tools/code/`（CodeToolsProperties/CodeSandboxService/CodeExecutionTools）+ `skill/impl/CodeRunnerSkill`；每次执行经 `systemd-run --collect --wait --pipe` 起一次性 transient unit：DynamicUser + PrivateNetwork（完全断网）+ ProtectSystem=strict/ProtectHome/PrivateTmp + CapabilityBoundingSet 空 + NoNewPrivileges + MemoryDenyWriteExecute + MemoryMax=256M/CPUQuota=100%/TasksMax=64/RuntimeMaxSec=30（到点杀整个 cgroup，fork 子进程不漏网）+ `python3 -I`（脚本靠 755/644 DAC 只读，**未用** --bind-read-only——OpenCloudOS 9 的 systemd-run 不识别该选项，首跑踩坑后移除）；生产 agent 以非 root 用户 agent 运行 → sudoers 白名单调参数固定的 wrapper `/opt/agent-sandbox/run-sandbox`（readlink -f + /opt/agent-data/sandbox 白名单防注入/穿越）；Linux 找不到 systemd-run 启动 fail-fast 不静默降级，非 Linux auto 回退 direct（启动 WARN，无隔离仅供本地）
+    - 资源/取消：Semaphore 并发上限默认 1（满载友好提示）、stdout/stderr 合并 8000 字符截断（超限继续排空防管道阻塞）、Java waitFor 超时+10s 兜底、中断（7.2 停止传播）时 destroyForcibly；退出码 137/143 分类提示（OOM/超时）；临时 .py 用后即删
+    - 审批：executePython 登记 CONFIRM/high（ToolRiskPolicy），弹窗预览完整代码；codeExecutionTools 注册进 ToolRegistry 可被自定义 Skill 引用；PC 审批弹窗 pre 补显式等宽字体（App 零改动，原超时拒绝降级不变）
+    - backend 零代码改动：条件 Skill Bean 经 /api/agent/skills/catalog 自动收录，重启 backend 后 syncBuiltinCatalog 落库 code-runner 行（日志确认），挂载后 agent 以代码内置定义为准
+    - 部署脚本（`agent/deploy-test/`）：`code-sandbox-setup.sh`（装 python3+numpy、wrapper、sudoers.d、unit 注入开关/CODE_SANDBOX_DIR、重启校验注册，幂等）；`code-sandbox-attacks.sh`（10 项断言，含"执行器报错 vs 沙箱真杀"区分防假阳性）；`code-sandbox-e2e.sh`（临时用户全链路冒烟，trap 清库）
+    - 生产验收（82.156.243.32，2026-09-13）：attacks 10/10——正常执行、死循环精确 30s 杀（rc=1）、fork 炸弹 31s cgroup 整组杀、2GB 申请 OOM、urllib 断网 URLError、写 /etc 拒绝、os.system 子进程同受限、双沙箱并发 2s 完成、numpy 在 MemoryDenyWriteExecute 下正常、agent 用户 sudo wrapper 路径通；E2E 7/7——SSE 审批弹窗→批准后回复含 56088、拒绝后无 778743 且 agent 日志 approved=false；沙箱目录/transient unit 无残留；agent/backend active + 8080/8081/nginx HTTPS 全 200；57 单测通过、PC tsc+vite build 通过
+    - 回滚：jar 回滚备份 `/opt/agent/agent.jar.bak-20260913`（上线前版本）；功能级回滚 = unit 删 AGENT_TOOLS_CODE_ENABLED/CODE_SANDBOX_DIR 两行重启（回休眠，wrapper/sudoers 可留）
   - [ ] 6.4 **MCP 协议支持**（接入外部工具生态的事实标准，收益最大）✅ langchain4j-mcp 1.17.2-beta27；`agent.mcp.servers[]` 配置（stdio/Streamable HTTP），每个 server 动态内置技能 `mcp:{name}`，默认空配置休眠；approval=confirm（默认，走同一审批流）/auto
   - 安全前提：危险工具（HTTP/执行命令）必须配权限控制 + 人工确认（human-in-the-loop）✅ 已落地：SSE `approval-request` + POST /api/agent/approvals/{id}/decision（X-Agent-Token + userId 归属校验，404/409）；拒绝/60s 超时/断连全部安全收敛；agent 保持无状态，「本会话始终允许」存 backend Redis（tool:grant:{user}:{conv}，TTL 7 天）随 payload.allowedTools 下发；PC 端 Modal 确认，App 端安全降级（超时拒绝）
   - 验收：新工具可通过 Skill 机制挂载；高危操作前端弹确认后才执行 —— 待三端部署后线上实测（搜索源国内可达性、审批全链路、MCP 实接名单）；规格见 .trae/specs/p1-6-tools-ecosystem/
@@ -116,7 +123,17 @@
     管理端口外部不可达（ss 仅 127.0.0.1）
 
 - [ ] **11. 反馈与评估闭环**
-  - [ ] 11.1 答案点赞/点踩 + bad case 收集落库
+  - [x] 11.1 答案点赞/点踩 + bad case 收集落库 ✅ 2026-09-13 完成并部署生产（管理员 zlf；待用户浏览器实测点赞/点踩与后台页）
+    - 落地（仅 PC web + backend，agent/agent_mobile 零改动）：
+      - backend 新增 `message_feedback` 表（trace_id+user_id 唯一，rating ±1/原因码/备注，schema.sql 自动建新表无需手工 ALTER）；删除会话级联清反馈
+      - `POST /api/feedback`（1 赞/-1 踩/0 取消；再点同一评价=取消；赞踩互斥切换；traceId 归属校验复用 existsByTraceIdAndUserId，非本人/被取消回合 404）；`GET /api/feedback/reasons` 原因码字典；history 接口每条消息批量水合 `feedback`（单次 IN 无 N+1）
+      - 管理员白名单：`app.admin.usernames`（环境变量 APP_ADMIN_USERNAMES 逗号分隔，空=fail-closed 全员 403）+ AdminInterceptor 拦 `/api/admin/**`；`/api/auth/me` 与登录/注册响应带 admin 标志；前端启动静默调 /me 刷新
+      - 管理后台 `GET /api/admin/feedback`（评分/原因/关键词[匹配备注与问答内容]/时间范围分页，富化问题+答案+会话标题，问答截断 4000 字）与 `/stats`（总数/赞/踩/原因分布）；PC 新增「反馈管理」页（仅管理员可见菜单，直敲 URL 403 空态）
+      - PC 助手气泡下 FeedbackBar（点赞即时提交；点踩 Popover 单选原因+可选备注；乐观更新+失败回滚；实时回合结束后与历史消息均可用）；Micrometer `backend.feedback.total{outcome,reason}`
+      - 构建验证：backend `mvnw clean package` 通过；前端 tsc -b + vite build 通过
+    - 部署（2026-09-13）：新机 agent-backend.jar 已换（备份 agent-backend.jar.bak-20260913，unit 备份 .service.bak-20260913），unit 注入 `APP_ADMIN_USERNAMES=zlf`（第 15 行）后 daemon-reload+restart；旧机前端原子切换（index-D3xXRIa7.js）；agent 服务未动
+    - 线上冒烟（临时用户，已清理）：无 token /api/feedback 与 /api/admin/feedback 均 401；注册/me 带 admin=false；reasons 200 且按固定顺序（修复了 Map.copyOf 乱序，改用 Collections.unmodifiableMap(LinkedHashMap)，重新构建替换）；他人 trace 404；rating=5/非法原因码 400；非管理员 admin 两接口 403；message_feedback 表自动创建结构正确；nginx HTTPS 链路 401/401/health 200；公网 zlfshop.xyz 为新 hash；journal 无 error
+    - 回滚：jar 回滚备份 .bak-20260913；unit 删第 15 行 APP_ADMIN_USERNAMES 后 daemon-reload+restart（前端旧版已随原子切换删除，需要时从 dist 重新发布）
   - [ ] 11.2 建立 eval 数据集（RAG 召回率、回答质量、工具调用正确率），回归测试
   - [ ] 11.3 Prompt / Skill 版本管理与 A/B 对比，改 prompt 不再"靠手感"
   - 验收：点踩的 bad case 可在后台检索；prompt 变更有 eval 报告对比

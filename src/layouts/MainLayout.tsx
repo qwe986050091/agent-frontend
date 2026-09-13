@@ -9,6 +9,7 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  MessageOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -29,6 +30,11 @@ const NAV_ITEMS = [
   { key: '/usage', icon: <BarChartOutlined />, label: '用量统计' },
 ]
 
+/** 仅管理员可见的导航项（白名单由后端下发 user.admin，接口侧 AdminInterceptor 兜底 403） */
+const ADMIN_NAV_ITEMS = [
+  { key: '/admin/feedback', icon: <MessageOutlined />, label: '反馈管理' },
+]
+
 /**
  * 固定在侧边栏顶部、不随滚动消失的入口（ChatGPT 风格）。
  * action='navigate' 跳转 key 路由；action='new-chat' 点击即新建会话（动作型，不高亮）。
@@ -42,9 +48,6 @@ const FIXED_ITEMS: Array<{
 }> = [
   { key: 'new-chat', icon: <EditOutlined />, label: '新聊天', action: 'new-chat' },
 ]
-
-/** 随「最近」列表一起滚动的普通路由 tab */
-const SCROLL_NAV = NAV_ITEMS
 
 /**
  * 暴露给子路由（ChatPage）的会话状态：
@@ -85,6 +88,9 @@ export default function MainLayout() {
   const [renameValue, setRenameValue] = useState('')
 
   const displayName = user?.nickname || user?.username || '用户'
+
+  /** 随「最近」列表一起滚动的普通路由 tab（管理员额外看到反馈管理） */
+  const scrollNavItems = user?.admin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS
 
   /**
    * 当前激活会话 id（来自 URL query）：
@@ -230,7 +236,7 @@ export default function MainLayout() {
           {/* 单一滚动区：知识库/技能管理 tab +「最近」标题 + 会话列表（一起滚动，一条滚动条） */}
           <div className="sidebar-scroll">
             <nav className="sidebar-nav sidebar-nav--scroll">
-              {SCROLL_NAV.map((item) => (
+              {scrollNavItems.map((item) => (
                 <button
                   key={item.key}
                   type="button"

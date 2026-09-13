@@ -13,6 +13,7 @@ import {
   decideApproval,
   streamChat,
   type ApprovalRequestData,
+  type FeedbackInfo,
   type RagTrace,
   type ToolTrace,
   type UsageTrace,
@@ -21,6 +22,7 @@ import { useAuth } from '../auth'
 import { useConversations } from '../layouts/MainLayout'
 import { TracePanels, TraceFooter } from '../components/TracePanels'
 import HistoricalTrace from '../components/HistoricalTrace'
+import FeedbackBar from '../components/FeedbackBar'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 const { TextArea } = Input
@@ -33,6 +35,8 @@ interface Message {
   tools?: ToolTrace[]
   recalls?: RagTrace[]
   usage?: UsageTrace & { costYuan?: number }
+  /** 本回合赞/踩反馈（history 接口附带；实时提交后本地回写） */
+  feedback?: FeedbackInfo | null
 }
 
 interface Skill {
@@ -257,6 +261,11 @@ export default function ChatPage() {
     abortRef.current?.abort()
   }
 
+  /** 不可变更新指定位置的消息（反馈状态回写） */
+  function patchMessageAt(index: number, patch: Partial<Message>) {
+    setMessages((list) => list.map((m, idx) => (idx === index ? { ...m, ...patch } : m)))
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -424,6 +433,14 @@ export default function ChatPage() {
                       <HistoricalTrace traceId={m.traceId} />
                     )}
                     {(hasLiveTrace || m.usage) && <TraceFooter usage={m.usage} traceId={m.traceId} />}
+                    {/* 赞/踩：仅完整回复（非流式中）且有 traceId 时展示 */}
+                    {!streaming && m.traceId && m.content && (
+                      <FeedbackBar
+                        traceId={m.traceId}
+                        initial={m.feedback ?? null}
+                        onChange={(fb) => patchMessageAt(i, { feedback: fb })}
+                      />
+                    )}
                   </div>
                 )}
               </div>
