@@ -1227,6 +1227,31 @@ body {
   border: 1px solid var(--border-soft, #eef1f6);
   border-radius: 10px;
   padding: 8px 10px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+/* 回答中 [n] 点击后定位高亮（P1-9.4） */
+.trace-segment--flash {
+  background: #e6f4ff;
+  border-color: #69b1ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.18);
+}
+.trace-segment-no {
+  color: #1677ff;
+  font-weight: 700;
+  margin-right: 4px;
+}
+/* 回答正文里的可点引用编号 */
+.cite-chip {
+  cursor: pointer;
+  margin-inline: 2px;
+  padding-inline: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 6px;
+}
+.cite-chip:hover {
+  background: #1677ff;
+  color: #fff;
 }
 .trace-segment-head {
   display: flex;

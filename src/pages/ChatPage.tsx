@@ -20,7 +20,8 @@ import {
 } from '../api'
 import { useAuth } from '../auth'
 import { useConversations } from '../layouts/MainLayout'
-import { TracePanels, TraceFooter } from '../components/TracePanels'
+import { TracePanels, TraceFooter, type CiteSignal } from '../components/TracePanels'
+import { CitationText } from '../components/CitationText'
 import HistoricalTrace from '../components/HistoricalTrace'
 import FeedbackBar from '../components/FeedbackBar'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
@@ -89,6 +90,8 @@ export default function ChatPage() {
   // 高危工具审批：SSE 推来的审批请求排队，单弹窗依次处理
   const [approvalQueue, setApprovalQueue] = useState<ApprovalRequestData[]>([])
   const [approvalDeciding, setApprovalDeciding] = useState(false)
+  /** 引用 [n] 点击信号（按消息序号）：驱动对应 TracePanels 展开+定位高亮（P1-9.4） */
+  const [citeSignals, setCiteSignals] = useState<Record<number, CiteSignal>>({})
   const [rememberGrant, setRememberGrant] = useState(false)
   const currentApproval = approvalQueue[0]
 
@@ -412,6 +415,11 @@ export default function ChatPage() {
               )
             }
             const hasLiveTrace = (m.tools?.length || 0) > 0 || (m.recalls?.length || 0) > 0
+            // 回答里的 [n] 只对应文档片段（历史对话片段不编号）
+            const docSegmentCount = (m.recalls || []).reduce(
+              (n, r) => n + (r.segments || []).filter((s) => s.type !== 'conversation').length,
+              0,
+            )
             return (
               <div key={i} className="chat-row assistant">
                 <img className="chat-avatar" src={assistantAvatar} alt="助手" />
@@ -421,12 +429,18 @@ export default function ChatPage() {
                   </span>
                 ) : (
                   <div className="chat-bubble-assistant">
-                    <TracePanels tools={m.tools} recalls={m.recalls} />
+                    <TracePanels
+                      tools={m.tools}
+                      recalls={m.recalls}
+                      citeSignal={citeSignals[i] ?? null}
+                    />
                     {m.content && (
-                      <pre className="chat-text">
-                        {m.content}
-                        {streaming ? <span className="chat-cursor" /> : null}
-                      </pre>
+                      <CitationText
+                        content={m.content}
+                        streaming={streaming}
+                        docSegmentCount={docSegmentCount}
+                        onCite={(n) => setCiteSignals((prev) => ({ ...prev, [i]: { n, ts: Date.now() } }))}
+                      />
                     )}
                     {/* 实时 trace 已在上方渲染；历史消息（无实时数据但有 traceId）懒加载回看 */}
                     {!streaming && !hasLiveTrace && m.traceId && (

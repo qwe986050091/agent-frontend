@@ -81,15 +81,29 @@
   - 生产库已 ALTER（chat_message 加列+索引、agent_memory 复合主键），历史数据自动归默认会话 0
   - 验收（线上实测 82.156.243.32）：会话 A 问数学/会话 B 问地理 → 各自 history 完全独立、互不串上下文；重命名/删除（级联清消息）正常；摘要按 (user_id, conversation_id) 复合主键存取
 
-- [ ] **9. RAG 生产级升级**
+- [x] **9. RAG 生产级升级**  <!-- 2026-09-15 全部上线生产（82.156.243.32）并线上实测通过；78 单测 -->
   - 现状：`RagService` 用 InMemoryEmbeddingStore + 全量 JSON 快照；仅支持 txt/md；纯向量召回；无来源引用
   - 动作：
-    - [ ] 9.1 向量库换 PGVector / Milvus / Redis Stack（解决内存与全量序列化瓶颈）
-    - [ ] 9.2 文档解析扩展：PDF / Word / Excel / HTML
-    - [ ] 9.3 混合检索：BM25 关键词 + 向量召回 + Rerank 重排序
-    - [ ] 9.4 **答案引用来源（citation）**：回答标注来自哪个文档哪一段，可点击核验
-    - [ ] 9.5 检索过程可见：前端展示召回片段与相似度分数
-  - 验收：上传 PDF 可检索；专业术语/编号类查询能命中；回答附带来源卡片
+    - [x] 9.1 向量库换 PGVector（解决内存与全量序列化瓶颈）
+    - [x] 9.2 文档解析扩展：PDF / Word / Excel / PPT / HTML
+    - [x] 9.3 混合检索：关键词（pg_trgm）+ 向量 RRF + Rerank 重排序
+    - [x] 9.4 **答案引用来源（citation）**：回答标注 [n]，PC 可点击定位到对应片段（App 零改动，[n] 纯文本可读）
+    - [x] 9.5 检索过程可见：前端展示召回片段、相似度/通道/精排分
+  - 验收：上传 PDF 可检索；专业术语/编号类查询能命中；回答附带来源编号可点回查
+  - 落地（2026-09-15 代码 + 当日生产上线实测）：
+    - 9.2：agent 加 langchain4j-document-parser-apache-tika（BOM 管理）；新增 `rag/DocumentTextExtractor`（AutoDetectParser，正文 50 万字上限 BodyContentHandler、60s 墙钟超时+中断、有界解析线程池 2/队列8 满载 503，空文本/加密/扫描件明确报错）；新接口 `POST /api/agent/rag/index-file`（multipart，422 UNPROCESSABLE_DOCUMENT/413 FILE_TOO_LARGE/503 映射）；片段 metadata 加 `chunkIndex`；两端 multipart 20MB（agent+backend yml）。backend `AgentClient.indexDocumentFile`（ByteArrayResource multipart，4xx 不顶熔断），`KnowledgeController` 放开 pdf/doc/docx/xls/xlsx/ppt/pptx/html/htm（纯文本仍走 JSON 旧路）并透传 agent 422/413 可读原因，GlobalExceptionHandler 补 413；PC accept/20MB 前置校验/文案；nginx 4 处模板 10m→25m（d:\code\deploy 三处 + deploy-frontend.sh）
+    - 9.1：agent 加 langchain4j-pgvector 1.17.2-beta27；`rag.store: memory|pgvector`（env RAG_STORE，默认 memory 本地零改动），PG 装配 `PgVectorEmbeddingStore`（512 维/COMBINED_JSONB/createTable=true/skipCreateVectorExtension=true/缺密码 fail-fast 指引 unit 注入）；memory 模式快照机制保留，pgvector 模式自动停用；`rag/SnapshotMigrator` 首次启动把旧 JSON 快照按原 ID 一次性迁 PG（PG 空才跑、成功后快照归档 .migrated-时间戳、失败 ERROR 不阻断）；部署脚本 `agent/deploy-test/pgvector-setup.sh`（PGDG 阿里云镜像源自动探测、PG16+pgvector、仅 127.0.0.1、shared_buffers=128m、建库建角色建 vector 扩展、周备份 cron、unit 注入 RAG_STORE/RAG_PG_*、重启校验+监听面确认）
+    - 9.3：`rag/HybridContentRetriever` 双路（向量 Top10 floor 0.3 + `rag/KeywordSearcher` pg_trgm+ILIKE Top10）→ RRF(k=60) 融合 → `rag/RerankScorer`（langchain4j-onnx-scoring + Xenova/bge-reranker-base 量化 ONNX，懒加载/缺文件/失败逐级降级，开关 rag.rerank.enabled 默认关）；纯向量（memory 模式）保持原 minScore=0.5 单路。关键词切词：ascii 整串（REF-2026-0001）+ 中文 bigram，5 单测。观测贯通：RagSegment/rag_recall_record 加 channel(vector/keyword/both)、rerankScore（schema.sql 新库带列，生产由部署脚本幂等 ALTER），PC 召回面板加通道 Tag+精排分。部署脚本 `agent/deploy-test/reranker-setup.sh`（hf-mirror 下模型/tokenizer+大小校验、MySQL 两列幂等 ALTER、PG 建 pg_trgm、unit 注入 RAG_RERANK_* 重启）
+    - 9.4：agent `rag/NumberedCitationContentInjector`（文档片段按注入顺序编号 [n]《来源》，历史对话不编号；prompt 规则：只依据资料、资料不足明说不编造、句末标 [n] 不得杜撰编号），同步/流式 AiServices 均挂 DefaultRetrievalAugmentor（1.17.2 无 contentInjector builder 方法）；4 单测。PC 新增 `CitationText`（回答 [n] 渲染可点 Tag，越界编号按纯文本）→ 点击联动 `TracePanels` 展开"知识召回"、滚动定位并高亮对应文档片段（片段头同步加 [n]）；agent_mobile 零改动
+    - 验证（本地）：agent 78 单测全过（+5 Tika +1 快照迁移反射 +5 切词 +4 注入器 +6 最终名额组装）、`mvnw clean package` agent/backend 均过、PC tsc+vite build 过
+    - **生产上线（2026-09-15 晚，82.156.243.32 + 旧机前端，全部实测通过）**：
+      ① jar 备份 `agent.jar.bak-20260915`/`agent-backend.jar.bak-20260915` 后换包重启；PC 静态站原子切换 index-Dw6X2djX.js；两机 3 份 nginx 配置（api/api2/前端站）client_max_body_size 10m→25m 并 reload。线上库手工幂等补 rag_recall_record 两列（`deploy-test/rag-db-migrate.sh`；既有表不随 CREATE TABLE IF NOT EXISTS 加列，先于 backend 写入修复）
+      ② `pgvector-setup.sh` 实战差异修复：a) OpenCloudOS 9.6 EPOL 自带 postgresql16（16.15，/usr/bin + postgresql.service + /var/lib/pgsql/data 无版本布局），pgvector_16 0.8.6 来自阿里云 PGDG 仓装在 /usr/pgsql-16，脚本改为双布局探测并把 vector.so/control/sql 软链到 /usr/lib64/pgsql 与 /usr/share/pgsql/extension；b) 阿里云镜像正确路径是 `…/postgresql/repos/yum/{16,common}/redhat/rhel-9-x86_64`（非 yel）；c) OC initdb 的 pg_hba 对 127.0.0.1 默认 ident，JDBC 密码连失败，收敛为 TCP scram-sha-256 + socket peer；d) JSONB 配置必须显式 `columnDefinitions("metadata JSONB NULL")`（builder 校验非空）。旧 JSON 快照 **142 片段一次性迁入 PG**（9 文档+133 对话）后归档 .migrated-20260915233933；清理历次 e2e 临时用户孤儿向量 87 条，现存 zlf 55 条；trigram GIN 索引自建成功（pg_trgm 是 trusted extension，库 owner 可建）；PG 仅监听 127.0.0.1，周备份 cron 已部署
+      ③ 混合检索排序实战修复：关键词路原 ORDER BY char_length 让短对话挤出长文档（TK-2026-0007 一度漏召），改为"文档类型优先、同型按长度"；最终名额组装新增"文档按融合/精排序先占名额、对话补空位"（composeFinalOrder，6 单测）
+      ④ `reranker-setup.sh`：Xenova/bge-reranker-base model_quantized.onnx 实际 267MB（hf-mirror ~3m40s）+ tokenizer.json 16.3MB 在仓库根目录；MySQL 加列/pg_trgm 均幂等跳过；unit 注入 RAG_RERANK_ENABLED=true + RAG_RERANK_DIR，首次检索懒加载日志确认
+      ⑤ 线上 e2e（`deploy-test/rag-e2e.sh` 四阶段，临时用户 trap 清理含 PG 向量）：PDF（Edge 无头导出，中文文本层）+ 手工 OOXML docx 上传解析索引 OK；语义问答（七个工作日/黑金三万）正确且句末带 [n]；编号 WAR-8842-X、TK-2026-0007 双路命中（channel=both/keyword）；无资料问题稳定回答"现有资料中没有…"不编造。精排分区分度符合预期（相关文档 +5.56 vs 无关文档 -6.26；预算问全负→拒答）；PC 召回面板出现通道 Tag/精排分，回答 [n] 可点联动（UI 待用户浏览器实测）
+      ⑥ 资源：agent RSS 1365MB（-Xmx768m + 两个 ONNX 模型 native；reranker 增加约 400MB），PG RSS ~27MB（shared_buffers 上限 128MB），系统可用 817MB + 2GB swap；延迟：精排使单轮问答增加约 1-2s（实测 2.4-5s）。三服务 active，8080/8081/HTTPS(api 直连+旧机跨机反代)/前端 全 200
+      回滚：jar 用 bak-20260915；RAG 回 memory = unit 删 RAG_STORE/RAG_PG_* 六行（PG 数据保留）；关 rerank = 删 RAG_RERANK_* 两行；停用 PG = disable --now postgresql
 
 ---
 

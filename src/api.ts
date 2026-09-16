@@ -200,6 +200,10 @@ export interface RagSegment {
   type: string
   text: string
   score: number
+  /** 命中通道：vector 语义 / keyword 关键词 / both 双路（P1-9.3，老数据缺省 vector） */
+  channel?: 'vector' | 'keyword' | 'both' | string
+  /** Rerank 精排 raw logit（未启用精排时为空） */
+  rerankScore?: number | null
 }
 
 export interface RagTrace {
