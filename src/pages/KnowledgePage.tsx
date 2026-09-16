@@ -30,7 +30,8 @@ import assistantAvatar from '../assets/assistant-avatar.jpg'
 /**
  * 知识库管理页
  *
- * 上传 .txt/.md 文本文档 → 后端切块并向量化存入 Agent 侧向量库；
+ * 上传 txt/md/PDF/Word/Excel/PPT/HTML 文档 → backend 转发 Agent 侧：
+ * 二进制文档由 Tika 抽取正文，随后切块并向量化存入向量库；
  * 对话时 Agent 会自动检索这些文档片段（RAG），回答里可引用文档内容。
  */
 export default function KnowledgePage() {
@@ -55,7 +56,7 @@ export default function KnowledgePage() {
 
   // ========== 上传文档 ==========
   const uploadProps: UploadProps = {
-    accept: '.txt,.md,.text,.markdown',
+    accept: '.txt,.md,.text,.markdown,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.html,.htm',
     multiple: false,
     showUploadList: false,
     customRequest: async (options) => {
@@ -87,6 +88,18 @@ export default function KnowledgePage() {
             </div>
           ),
         })
+      }
+
+      if (f.size > 20 * 1024 * 1024) {
+        notification.error({
+          key,
+          placement: 'bottomRight',
+          duration: 5,
+          message: '文件过大',
+          description: `《${f.name}》大小为 ${(f.size / 1024 / 1024).toFixed(1)}MB，超过 20MB 上限`,
+        })
+        onError?.(new Error('文件超过 20MB 上限'))
+        return
       }
 
       showProgress(0)
@@ -133,9 +146,10 @@ export default function KnowledgePage() {
             <p className="ant-upload-drag-icon">
               <CloudUploadOutlined />
             </p>
-            <p className="ant-upload-text">点击或拖拽文本文件到此处上传</p>
+            <p className="ant-upload-text">点击或拖拽文档到此处上传</p>
             <p className="ant-upload-hint">
-              支持 .txt / .md 文本文件；上传后自动切分、向量化，对话时可被 AI 检索引用
+              支持 txt / md / PDF / Word / Excel / PPT / HTML，单个文件最大 20MB；
+              上传后自动抽取正文、切分、向量化，对话时可被 AI 检索引用
             </p>
           </Upload.Dragger>
         </Card>
