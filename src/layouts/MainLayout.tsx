@@ -121,8 +121,10 @@ export default function MainLayout() {
     try {
       const list = await listConversations()
       setConversations(list)
+      // 仅在聊天页做「无会话参数时落到最近一条」的规范化；
+      // 其他子页面（首页/知识库/技能/用量等）刷新必须保持原路由，不能被吸到 /chat
       const hasConvParam = new URLSearchParams(location.search).has('conversationId')
-      if (!hasConvParam && list.length > 0) {
+      if (location.pathname === '/chat' && !hasConvParam && list.length > 0) {
         navigate(`/chat?conversationId=${list[0].id}`, { replace: true })
       }
     } catch (err: any) {

@@ -181,6 +181,25 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
   return data as T
 }
 
+/**
+ * 鉴权拉取二进制资源（P1-8：对话图片附件）。
+ * <img src> 无法带 Authorization 头，组件需先经此函数拿到 Blob 再转 objectURL。
+ */
+export async function fetchAuthBlob(path: string): Promise<Blob> {
+  const res = await fetch(path, {
+    headers: getToken() ? { Authorization: 'Bearer ' + getToken() } : {},
+  })
+  if (res.status === 401) {
+    clearAuth()
+    if (!location.pathname.startsWith('/login')) location.href = '/login'
+    throw new ApiError('未登录或登录已过期', 401)
+  }
+  if (!res.ok) {
+    throw new ApiError(`图片加载失败 (${res.status})`, res.status)
+  }
+  return res.blob()
+}
+
 // ==================== 全链路 trace（P2-10） ====================
 
 export interface ToolTrace {
@@ -434,6 +453,7 @@ export async function getFeedbackStats(from?: string, to?: string): Promise<Feed
  * 事件类型：
  *  - 默认事件：token 片段 → onToken
  *  - event: tool/rag/usage：trace 事件 → onTool/onRag/onUsage
+ *  - event: error：SSE 已提交后的终态业务错误（如模型拒绝图片）→ 抛出带可读文案的 ApiError
  *  - event: memory / data:[DONE]：服务端内部处理/结束标记，不到前端
  *
  * @param handlers.onToken   每收到一个 token 片段回调
@@ -444,6 +464,18 @@ export async function getFeedbackStats(from?: string, to?: string): Promise<Feed
  * @param handlers.onApproval 高危工具审批请求（需弹确认窗，决策走 decideApproval）
  * @param handlers.onTraceId 服务端回显的 traceId
  */
+/** 发送图片入参（P1-8）：data 为不含 data: 前缀的原始 base64；字段名须与后端 record mimeType 一致 */
+export interface ChatImageInput {
+  mimeType: string
+  data: string
+}
+
+/** 历史消息图片附件（元数据；字节经 /api/chat/attachments/{id} 鉴权拉取） */
+export interface ChatAttachment {
+  id: number
+  mimeType: string
+}
+
 export async function streamChat(
   message: string,
   conversationId: number,
@@ -457,6 +489,7 @@ export async function streamChat(
     onApproval?: (approval: ApprovalRequestData) => void
     onTraceId?: (traceId: string) => void
   },
+  images?: ChatImageInput[],
 ): Promise<void> {
   // 前端生成 traceId 随头上送，便于请求失败时也能与服务端日志对账
   const traceId = crypto.randomUUID()
@@ -469,7 +502,12 @@ export async function streamChat(
         'X-Trace-Id': traceId,
         ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}),
       },
-      body: JSON.stringify({ message, conversationId }),
+      body: JSON.stringify({
+        message,
+        conversationId,
+        // P1-8：无图时不带 images 字段（后端按纯文本回合处理）
+        ...(images && images.length > 0 ? { images } : {}),
+      }),
       signal: handlers.signal,
     })
   } catch (e: any) {
@@ -523,35 +561,55 @@ export async function streamChat(
       }
       return
     }
+    if (eventName === 'error') {
+      // 服务端在 SSE 已提交后下发的终态业务错误（HTTP 状态仍是 200）：
+      // 解析 {code,message} 并抛出，由调用方按普通失败渲染到助手气泡
+      let msg = '服务处理出错，请稍后重试'
+      try {
+        const parsed = JSON.parse(data) as { code?: string; message?: string }
+        if (parsed.message) msg = parsed.message
+      } catch {
+        /* 坏 JSON 用默认文案 */
+      }
+      throw new ApiError(msg, 200)
+    }
     if (eventName === null) {
       handlers.onToken(data)
     }
     // memory 等其它命名事件不到前端，忽略
   }
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    // 统一换行，按 SSE 规范：空行分隔事件，event: 声明类型，data: 为数据行
-    buffer += decoder.decode(value, { stream: true })
-    buffer = buffer.replace(/\r\n/g, '\n')
+  // error 事件在 dispatch 内抛出：用 try/finally 保证释放 reader，
+  // 避免连接悬挂到服务端关闭（正常结束时 cancel 已完成的 reader 是空操作）
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      // 统一换行，按 SSE 规范：空行分隔事件，event: 声明类型，data: 为数据行
+      buffer += decoder.decode(value, { stream: true })
+      buffer = buffer.replace(/\r\n/g, '\n')
 
-    let sep: number
-    while ((sep = buffer.indexOf('\n\n')) !== -1) {
-      const rawEvent = buffer.slice(0, sep)
-      buffer = buffer.slice(sep + 2)
+      let sep: number
+      while ((sep = buffer.indexOf('\n\n')) !== -1) {
+        const rawEvent = buffer.slice(0, sep)
+        buffer = buffer.slice(sep + 2)
 
-      const dataLines: string[] = []
-      let eventName: string | null = null
-      for (const line of rawEvent.split('\n')) {
-        if (line.startsWith('event:')) {
-          eventName = line.slice(6).replace(/^ +/, '')
-        } else if (line.startsWith('data:')) {
-          dataLines.push(line.slice(5).replace(/^ /, ''))
+        const dataLines: string[] = []
+        let eventName: string | null = null
+        for (const line of rawEvent.split('\n')) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).replace(/^ +/, '')
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).replace(/^ /, ''))
+          }
         }
+        if (dataLines.length === 0) continue
+        dispatch(eventName, dataLines.join('\n'))
       }
-      if (dataLines.length === 0) continue
-      dispatch(eventName, dataLines.join('\n'))
     }
+  } finally {
+    reader.cancel().catch(() => {
+      /* 已关闭/已取消均忽略 */
+    })
   }
 }

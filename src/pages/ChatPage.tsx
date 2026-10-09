@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { App as AntdApp, Checkbox, Input, Modal, Space, Spin, Tag, Tooltip } from 'antd'
+import { App as AntdApp, Checkbox, Image as AntImage, Input, Modal, Space, Spin, Tag, Tooltip } from 'antd'
 import {
   ArrowUpOutlined,
+  CloseOutlined,
+  PictureOutlined,
   StopOutlined,
   ToolOutlined,
   WarningOutlined,
@@ -13,6 +15,8 @@ import {
   decideApproval,
   streamChat,
   type ApprovalRequestData,
+  type ChatAttachment,
+  type ChatImageInput,
   type FeedbackInfo,
   type RagTrace,
   type ToolTrace,
@@ -24,9 +28,23 @@ import { TracePanels, TraceFooter, type CiteSignal } from '../components/TracePa
 import { CitationText } from '../components/CitationText'
 import HistoricalTrace from '../components/HistoricalTrace'
 import FeedbackBar from '../components/FeedbackBar'
+import AuthImage from '../components/AuthImage'
 import assistantAvatar from '../assets/assistant-avatar.jpg'
 
 const { TextArea } = Input
+
+/** 图片限制（需与后端 app.chat.image 配置一致） */
+const MAX_IMAGES = 3
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+/** 待发送图片：本地预览 dataURL + 上送给后端的纯 base64 */
+interface PendingImage {
+  uid: string
+  mimeType: string
+  dataUrl: string
+  base64: string
+}
 
 interface Message {
   role: 'user' | 'assistant'
@@ -38,6 +56,10 @@ interface Message {
   usage?: UsageTrace & { costYuan?: number }
   /** 本回合赞/踩反馈（history 接口附带；实时提交后本地回写） */
   feedback?: FeedbackInfo | null
+  /** 历史消息的图片附件（P1-8，服务端按 id 鉴权拉取） */
+  attachments?: ChatAttachment[]
+  /** 乐观气泡的本地图片（刚发送、历史尚未刷新时直接展示 dataURL） */
+  localImages?: string[]
 }
 
 interface Skill {
@@ -95,6 +117,59 @@ export default function ChatPage() {
   const [rememberGrant, setRememberGrant] = useState(false)
   const currentApproval = approvalQueue[0]
 
+  // P1-8 待发送图片（本地预览 + 纯 base64）；隐藏的 file input 用于触发选择
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  /** 选择图片：类型/大小/数量前端预校验（后端仍有权威校验），读为 dataURL 预览 */
+  async function handlePickImages(files: FileList | null) {
+    if (!files || files.length === 0) return
+    const remaining = MAX_IMAGES - pendingImages.length
+    if (remaining <= 0) {
+      message.warning(`单条消息最多发送 ${MAX_IMAGES} 张图片`)
+      return
+    }
+    const picked = Array.from(files).slice(0, remaining)
+    if (files.length > remaining) {
+      message.warning(`单条消息最多发送 ${MAX_IMAGES} 张图片，已只取前 ${remaining} 张`)
+    }
+    const loaded: PendingImage[] = []
+    for (const file of picked) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        message.warning(`「${file.name}」格式不支持，仅支持 JPEG/PNG/GIF/WebP`)
+        continue
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        message.warning(`「${file.name}」超过 5MB，已跳过`)
+        continue
+      }
+      const dataUrl = await fileToDataUrl(file)
+      const comma = dataUrl.indexOf(',')
+      loaded.push({
+        uid: crypto.randomUUID(),
+        mimeType: file.type,
+        dataUrl,
+        base64: comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl,
+      })
+    }
+    if (loaded.length > 0) {
+      setPendingImages((prev) => [...prev, ...loaded].slice(0, MAX_IMAGES))
+    }
+  }
+
+  function removePendingImage(uid: string) {
+    setPendingImages((prev) => prev.filter((p) => p.uid !== uid))
+  }
+
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   // 进入页面 / 切换会话时加载对应历史；草稿态直接是空白欢迎页，不请求历史
   useEffect(() => {
     if (activeConversationId === null) {
@@ -142,7 +217,17 @@ export default function ChatPage() {
 
   async function send() {
     const text = input.trim()
-    if (!text || loading) return
+    if (loading) return
+    // 文字与图片至少有其一（纯图片回合合法，后端会用兜底指令问模型）
+    if (!text && pendingImages.length === 0) return
+
+    // 取出待发图片并立即清空输入区（发送失败也不回滚到输入框，避免状态纠缠）
+    const imagesToSend: ChatImageInput[] = pendingImages.map((p) => ({
+      mimeType: p.mimeType,
+      data: p.base64,
+    }))
+    const localPreviews = pendingImages.map((p) => p.dataUrl)
+    setPendingImages([])
 
     let conversationId = activeConversationId
 
@@ -150,7 +235,7 @@ export default function ChatPage() {
     if (conversationId === null) {
       setLoading(true)
       try {
-        const created = await createConversation(titleFromMessage(text))
+        const created = await createConversation(text ? titleFromMessage(text) : '图片消息')
         conversationId = created.id
         // 侧边栏即时置顶出现新会话；replace 换 URL（刷新/中断后仍在该会话）
         addConversation(created)
@@ -163,8 +248,12 @@ export default function ChatPage() {
       }
     }
 
-    // 用户消息 + 占位的空 AI 消息（token 逐段追加进去）
-    setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+    // 用户消息（含本地图片预览）+ 占位的空 AI 消息（token 逐段追加进去）
+    setMessages((m) => [
+      ...m,
+      { role: 'user', content: text, localImages: localPreviews },
+      { role: 'assistant', content: '' },
+    ])
     setInput('')
     setLoading(true)
 
@@ -217,7 +306,7 @@ export default function ChatPage() {
         onReset: () => patchLast({ tools: [], recalls: [], usage: undefined }),
         onApproval: (approval) =>
           setApprovalQueue((q) => [...q, approval]),
-      })
+      }, imagesToSend)
     } catch (err: any) {
       // 用户主动停止：保留已生成内容，不弹错误
       if (err?.status === 0 && err?.message === '已停止生成') return
@@ -295,12 +384,52 @@ export default function ChatPage() {
         </div>
       )}
 
+      {pendingImages.length > 0 && (
+        <div className="chat-image-preview-row">
+          {pendingImages.map((img) => (
+            <div key={img.uid} className="chat-image-preview-item">
+              <img src={img.dataUrl} alt="待发送图片" />
+              <button
+                type="button"
+                className="chat-image-preview-remove"
+                aria-label="移除图片"
+                onClick={() => removePendingImage(img.uid)}
+              >
+                <CloseOutlined />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="chat-composer">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          multiple
+          hidden
+          onChange={(e) => {
+            void handlePickImages(e.target.files)
+            // 允许重复选同一张图（不清空则 change 事件不再触发）
+            e.target.value = ''
+          }}
+        />
+        <button
+          type="button"
+          className="chat-image-btn"
+          aria-label="发送图片"
+          title="发送图片（JPEG/PNG/GIF/WebP，单张≤5MB，最多3张）"
+          disabled={loading || pendingImages.length >= MAX_IMAGES}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <PictureOutlined />
+        </button>
         <TextArea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="有问题，随便问"
+          placeholder={pendingImages.length > 0 ? '补充说明，或直接发送图片' : '有问题，随便问'}
           variant="borderless"
           autoSize={{ minRows: 1, maxRows: 6 }}
           disabled={loading}
@@ -310,7 +439,7 @@ export default function ChatPage() {
           className="chat-send-btn"
           aria-label={loading ? '停止生成' : '发送'}
           onClick={loading ? stop : send}
-          disabled={!input.trim() && !loading}
+          disabled={!loading && !input.trim() && pendingImages.length === 0}
         >
           {loading ? <StopOutlined /> : <ArrowUpOutlined />}
         </button>
@@ -406,10 +535,29 @@ export default function ChatPage() {
           {messages.map((m, i) => {
             const streaming = loading && i === messages.length - 1 && m.role === 'assistant'
             if (m.role === 'user') {
+              const hasImages = (m.localImages?.length || 0) > 0 || (m.attachments?.length || 0) > 0
               return (
                 <div key={i} className="chat-row user">
                   <div className="chat-bubble-user">
-                    <pre className="chat-text">{m.content}</pre>
+                    {/* 纯图片回合 content 为空串，不渲染空文本块 */}
+                    {m.content && <pre className="chat-text">{m.content}</pre>}
+                    {hasImages && (
+                      <div className="chat-attachments">
+                        {m.localImages?.map((src) => (
+                          <AntImage
+                            key={src.slice(0, 32)}
+                            src={src}
+                            width={160}
+                            height={160}
+                            style={{ objectFit: 'cover', borderRadius: 8 }}
+                            alt="发送的图片"
+                          />
+                        ))}
+                        {m.attachments?.map((a) => (
+                          <AuthImage key={a.id} attachmentId={a.id} maxWidth={200} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )
