@@ -444,6 +444,119 @@ export async function getFeedbackStats(from?: string, to?: string): Promise<Feed
   return api(`/api/admin/feedback/stats${s ? '?' + s : ''}`)
 }
 
+// ==================== 定时任务（P2-9） ====================
+
+/** 任务最近一次执行结果（列表页「上次结果」列） */
+export interface ScheduledTaskLastRun {
+  status: string
+  finishedAt: string
+  durationMs: number
+  errorMessage: string
+  assistantMessageId: number
+}
+
+export interface ScheduledTask {
+  id: number
+  name: string
+  prompt: string
+  /** Spring 6 段 cron（秒 分 时 日 月 周） */
+  cronExpr: string
+  enabled: boolean
+  /** 任务级预授权工具（勾选=该任务自动放行这些工具，无需用户确认） */
+  toolsWhitelist: string[]
+  /** 任务专属会话（懒创建；结果在其中查看） */
+  conversationId: number | null
+  /** 下次执行时间（停用为 null） */
+  nextRunAt: string | null
+  lastRunAt: string | null
+  createdAt: string
+  updatedAt: string
+  lastRun: ScheduledTaskLastRun | null
+}
+
+export interface ScheduledTaskRun {
+  id: number
+  /** running / success / failed / skipped_budget */
+  status: string
+  traceId?: string | null
+  durationMs?: number | null
+  errorMessage?: string | null
+  startedAt?: string | null
+  finishedAt?: string | null
+  assistantMessageId?: number | null
+}
+
+/** 创建/更新入参（PATCH 语义：仅传要改的字段） */
+export interface TaskPayload {
+  name?: string
+  prompt?: string
+  cronExpr?: string
+  toolsWhitelist?: string[]
+  enabled?: boolean
+}
+
+export async function listTasks(): Promise<ScheduledTask[]> {
+  const data = await api<{ tasks: ScheduledTask[] }>('/api/tasks')
+  return data.tasks || []
+}
+
+export async function createTask(payload: TaskPayload): Promise<ScheduledTask> {
+  return api('/api/tasks', { method: 'POST', body: payload })
+}
+
+export async function updateTask(id: number, payload: TaskPayload): Promise<ScheduledTask> {
+  return api(`/api/tasks/${id}`, { method: 'PATCH', body: payload })
+}
+
+export async function deleteTask(id: number): Promise<void> {
+  await api(`/api/tasks/${id}`, { method: 'DELETE' })
+}
+
+/** 立即执行（不动 next_run_at；同任务 1 分钟 1 次、计入每日上限） */
+export async function runTaskNow(id: number): Promise<{ message: string }> {
+  return api(`/api/tasks/${id}/run-now`, { method: 'POST' })
+}
+
+export async function listTaskRuns(
+  id: number,
+  page = 0,
+  size = 20,
+): Promise<ScheduledTaskRun[]> {
+  const data = await api<{ runs: ScheduledTaskRun[] }>(
+    `/api/tasks/${id}/runs?page=${page}&size=${size}`,
+  )
+  return data.runs || []
+}
+
+// ==================== 站内通知（P2-9 M2） ====================
+
+export interface AppNotification {
+  id: number
+  /** 事件类型（v1 恒为 task_result，预留扩展） */
+  type: string
+  title: string
+  body?: string | null
+  /** 点击跳转目标会话（任务专属会话） */
+  targetConversationId?: number | null
+  read: boolean
+  createdAt: string
+}
+
+/** 游标拉取（afterId 之后的新事件，升序；离线后可补齐） */
+export async function listNotifications(
+  afterId: number,
+  limit = 20,
+): Promise<AppNotification[]> {
+  const data = await api<{ notifications: AppNotification[] }>(
+    `/api/notifications?after_id=${afterId}&limit=${limit}`,
+  )
+  return data.notifications || []
+}
+
+export async function markNotificationRead(id: number): Promise<void> {
+  await api(`/api/notifications/${id}/read`, { method: 'POST' })
+}
+
 /**
  * 流式对话（SSE）：POST /api/chat/stream
  *
