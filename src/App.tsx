@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import ChatPage from './pages/ChatPage'
 import SkillsPage from './pages/SkillsPage'
+import TasksPage from './pages/TasksPage'
 import KnowledgePage from './pages/KnowledgePage'
 import UsagePage from './pages/UsagePage'
 import FeedbackAdminPage from './pages/FeedbackAdminPage'
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/tasks" element={<TasksPage />} />
         <Route path="/usage" element={<UsagePage />} />
         <Route path="/admin/feedback" element={<FeedbackAdminPage />} />
       </Route>

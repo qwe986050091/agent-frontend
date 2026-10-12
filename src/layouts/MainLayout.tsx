@@ -4,6 +4,7 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   BookOutlined,
+  ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   LogoutOutlined,
@@ -22,11 +23,13 @@ import {
   type Conversation,
 } from '../api'
 import DeskPet from '../components/DeskPet'
+import { useNotifications } from '../hooks/useNotifications'
 import appIcon from '../assets/app-icon.jpg'
 
 const NAV_ITEMS = [
   { key: '/knowledge', icon: <BookOutlined />, label: '知识库' },
   { key: '/skills', icon: <AppstoreOutlined />, label: '技能管理' },
+  { key: '/tasks', icon: <ClockCircleOutlined />, label: '定时任务' },
   { key: '/usage', icon: <BarChartOutlined />, label: '用量统计' },
 ]
 
@@ -88,6 +91,9 @@ export default function MainLayout() {
   const [renameValue, setRenameValue] = useState('')
 
   const displayName = user?.nickname || user?.username || '用户'
+
+  // PC 站内通知（P2-9 M2）：登录后全局轮询，任务完成弹站内 toast / 浏览器系统通知
+  useNotifications(!!user)
 
   /** 随「最近」列表一起滚动的普通路由 tab（管理员额外看到反馈管理） */
   const scrollNavItems = user?.admin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS

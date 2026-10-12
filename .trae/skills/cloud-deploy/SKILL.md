@@ -12,7 +12,7 @@ description: "Agent 项目云端发布技能：前端静态站部署到旧阿里
 
 | 角色 | 服务器 | SSH 别名 | 关键路径 |
 |---|---|---|---|
-| 前端静态站（Nginx + HTTPS） | 旧阿里云 123.56.82.34 | `old` | 站点目录 `/opt/agent/web`，域名 zlfshop.xyz，`/api/` 反代到新服务器 |
+| 前端静态站（Nginx + HTTPS） | 旧阿里云 123.56.82.34 | `old` | 站点目录 `/opt/agent/web`，域名 `zlfshop.cn` + `www.zlfshop.cn`（2026-10-11 迁移；`zlfshop.xyz` 双域名并行），`/api/` 反代到新服务器 |
 | agent 服务（8080，LangChain4j+RAG） | 新腾讯云 82.156.243.32 | `new` | jar：`/opt/agent/agent.jar`，systemd 服务名 `agent`，运行用户 agent |
 | backend 服务（8081，业务后端） | 新腾讯云 82.156.243.32 | `new` | jar：`/opt/agent/agent-backend.jar`，systemd 服务名 `agent-backend` |
 | RAG 向量快照 | 新服务器 | `new` | `/opt/agent/data/rag-embeddings.json`（agent 自动维护，勿手改） |
@@ -50,10 +50,10 @@ scp -r d:/code/agent_frontend/dist old:/tmp/web-new/
 ssh old "rm -rf /opt/agent/web.old && mv /opt/agent/web /opt/agent/web.old && mv /tmp/web-new/dist /opt/agent/web && rm -rf /opt/agent/web.old /tmp/web-new"
 
 # 4. 服务器本机验证（Host 头模拟 HTTPS 站点）
-ssh old "curl -sk -o /dev/null -w 'web: %{http_code}\n' https://127.0.0.1/ -H 'Host: zlfshop.xyz'; curl -sk -o /dev/null -w 'api: %{http_code}\n' https://127.0.0.1/api/health -H 'Host: zlfshop.xyz'; cat /opt/agent/web/index.html"
+ssh old "curl -sk -o /dev/null -w 'web: %{http_code}\n' https://127.0.0.1/ -H 'Host: zlfshop.cn'; curl -sk -o /dev/null -w 'api: %{http_code}\n' https://127.0.0.1/api/health -H 'Host: zlfshop.cn'; cat /opt/agent/web/index.html"
 ```
 
-验收标准：web 200、api 200；index.html 引用的 assets hash 为本次构建的新文件；再用 WebFetch 抓 https://zlfshop.xyz/ 做公网确认。
+验收标准：web 200、api 200；index.html 引用的 assets hash 为本次构建的新文件；再用 WebFetch 抓 https://zlfshop.cn/ 做公网确认。
 注意：旧 hash 资源 URL 仍可能返回 200（SPA 回退到 index.html），以磁盘文件和 index.html 引用为准。
 
 ## 流程二：后端部署（新服务器，两个 jar，有数秒中断）
@@ -77,7 +77,7 @@ ssh new "systemctl restart agent && sleep 12 && systemctl is-active agent && cur
 ssh new "journalctl -u agent --since '2 minutes ago' --no-pager | grep -iE 'error|exception|RAG|Started' | tail -20"
 ```
 
-验收标准：两个服务 `active`；8080/8081 健康检查 200；Nginx HTTPS `curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/api/health -H 'Host: api.zlfshop.xyz'` 为 200；日志无 ERROR。
+验收标准：两个服务 `active`；8080/8081 健康检查 200；Nginx HTTPS `curl -sk -o /dev/null -w '%{http_code}' https://127.0.0.1/api/health -H 'Host: api.zlfshop.cn'` 为 200；日志无 ERROR。
 回滚：把 `/opt/agent/*.jar.bak-YYYYMMDD` 改回正式名并重启对应服务。
 
 ## 流程三：代码沙箱环境（P1-6.3，仅涉及 agent，新机）
