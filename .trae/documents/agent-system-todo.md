@@ -156,12 +156,31 @@
 
 ## P3 — 工程体系
 
-- [ ] **12. 测试与 CI/CD**
-  - 现状：三个工程零测试类；部署靠手动 scp
+- [ ] **12. 测试与 CI/CD**（2026-10-13：代码侧全部落地，仅剩「建仓首推 + 分支保护」需人工操作）
+  - 现状（改造前）：三个工程零测试类；部署靠手动 scp
   - 动作：
-    - [ ] 12.1 核心单测：Skill JSON 解析、RAG 切块/检索/快照、SummarizingChatMemory 压缩、SSE 转发
-    - [ ] 12.2 CI 流水线（构建 + 测试 + 打包），CD 对接现有 systemd 部署脚本
-  - 验收：`mvn test` 有可通过的用例；推送后流水线自动构建
+    - [x] 12.1 核心单测：补 P2-12 点名的四项缺口 ✅ 2026-10-13（计划见 `p2-12-test-ci-cd_plan.md`）
+      - agent 侧新增 6 个测试类 42 项：SkillManagerResolveTest（含「javadoc 声明去重但实现未去重」的缺陷留痕）、
+        SkillDefinitionJsonTest、RagChunkingTest、RerankScorerTest、SummarizingChatMemoryThresholdTest（默认窗口 40/20）、
+        AgentStreamEventSequenceTest（usage→memory→[DONE] 严格顺序 / 取消不补发 / error 事件 / trace 事件名映射）
+      - backend 侧新增 3 个测试类 40 项：SkillServiceUploadTest、SkillControllerUploadTest、
+        AgentStreamForwardingTest（memory 不转发只提摘要 / 计费富化 / 前端断开抛 StreamClientClosedException / trace-reset 清空）
+      - 为可测性做 3 处不改行为的接缝：`RagService.chunkDocument` 抽为包私有 static；
+        `AgentController.sendTurnCompletion`（新抽出）/`emitTerminalError`/`sendConverged`/`emitTraceEvent` 改包私有；
+        `AgentClient.dispatchEvent` + `TraceAccumulator(.snapshot)` 改包私有
+      - 全量绿：agent 173 项、backend 132 项，Failures/Errors 均 0
+      - 顺带发现（未修，另案）：backend 的 Skill 上传校验只有 name 非空，无大小/长度/JSON schema 校验（关联 13.4）
+    - [ ] 12.2 CI 流水线 + CD（代码就绪，**待建仓首推**）
+      - [x] 四仓 `.github/workflows/ci.yml` 落盘：agent/backend `./mvnw -B clean test`（temurin 21 + maven 缓存）、
+        frontend `pnpm build`、mobile `pnpm typecheck`；触发 pull_request + push master，concurrency 取消旧跑
+      - [x] 前置动作：两 Java 仓补官方 `mvnw`（only-script 变体，`git update-index --chmod=+x` → mode 100755）；
+        四仓补 `.gitattributes`（mvnw/*.sh 锁 LF，防 CRLF 的 shebang 在 CI 上报 bad interpreter）；mobile 补 `typecheck` 脚本
+      - [x] 本地绿基线：agent 173 / backend 132 / frontend `pnpm build` ✓ / mobile `pnpm typecheck`（exit 0）
+      - [x] CD：`node .trae/skills/production-deploy/scripts/release.mjs <agent|backend|web|all>` 编排既有
+        deploy-jars.sh / deploy-web.sh（构建含测试 → 产物体检 → scp → 远端原子切换 → 健康断言 → 清理）；
+        实测 `web --tag 20261013-p212` 全绿（备份已生成、远端与本地临时文件自动清理、公网 200）
+      - [ ] 待人工：建 4 个 GitHub 私有仓 + remote + 首推 → 首个绿跑后配 required checks + 负向验收（故意改坏断言 → PR 变红 → 确认无法合并）
+  - 验收：`mvn test` 有可通过的用例 ✅；推送后流水线自动构建 ⏳（待首推）
 
 - [ ] **13. 其他工程项**
   - [ ] 13.1 DB schema 迁移工具：手写 schema.sql → Flyway / Liquibase
