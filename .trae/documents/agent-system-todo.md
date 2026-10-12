@@ -181,14 +181,19 @@
         deploy-jars.sh / deploy-web.sh（构建含测试 → 产物体检 → scp → 远端原子切换 → 健康断言 → 清理）；
         实测 `web --tag 20261013-p212` 全绿（备份已生成、远端与本地临时文件自动清理、公网 200）
       - [x] 负向验收：临时 PR（含故意类型错误）→ CI 在 PR 上变红（`typecheck fail 27s`）→ 验证后关闭 PR 并删除分支，master 未受影响
-      - [ ] **合并门禁无法落地（Free 套餐限制）**：分支保护与 Rulesets 对**私有仓**均返回
-        `403 Upgrade to GitHub Pro or make this repository public to enable this feature`。
-        实测该 PR 的 `mergeStateStatus=UNSTABLE / mergeable=MERGEABLE`，即**GitHub 不会阻止合并**。
-        三条出路：① 升级 GitHub Pro（约 $4/月）；② 仓库转公开（无需付费，但代码公开可见）；
-        ③ 保持现状——CI 仍会在每次 push/PR 上运行并把红叉显示在 PR 上，靠人看，只是不强制。
-        **默认先按 ③ 走，选 ①/② 需你拍板。**
+      - [x] **合并门禁：先探明 Free 套餐限制，再改用「转公开」拿到** ✅
+        - 探查结论：分支保护与 Rulesets 对**私有仓**均 403（`Upgrade to GitHub Pro or make this repository public`）。当时 PR 实测 `mergeStateStatus=UNSTABLE / MERGEABLE`，即不拦合并。
+        - 决策：**转公开**。但转公开前扫出 git 历史里有两条真实凭据（必须先处理，否则公开即不可逆外泄）：
+          - `agent`：`api-key: ${OPENAI_API_KEY:sk-ba039921f1d0428b83ca5aa72331a18a}`（DeepSeek key）
+          - `agent-backend`：`password: ${MYSQL_PASSWORD:wasdqew123}`（MySQL 口令）
+        - 处理：用 `git filter-repo --replace-text` 把这两个值从**全部提交**抹掉（agent 24 个提交 / backend 20 个，提交数不变、SHA 全变），force-push 覆盖远端；
+          并从远端**重新 mirror clone 后复扫**，确认全历史 0 命中。
+        - 结果：`agent`(d70a94b) 与 `agent-backend`(45e64e1) 已转 **public**，required check = `test`（check-run 名，非 UI 显示的 `ci / test`）。
+        - **门禁真实有效（实测）**：空提交 PR → `mergeStateStatus=CLEAN`（证明必需检查匹配成功）；再推一个故意失败的测试 → `mergeStateStatus=BLOCKED` + `test fail`。之前是 UNSTABLE/MERGEABLE，现在真的挡得住了。
+      - [ ] 待你拍板：`agent-frontend` / `agent-mobile` 仍是 private（已确认全历史无凭据，转公开安全），需你决定是否一并转公开以拿到门禁
+      - 备注：本机直连 github.com 时通时断，推送失败可改走 VPN 代理：`git -c http.proxy=http://127.0.0.1:7890 push`（需 iKuuuVPN 在运行）
   - 验收：`mvn test` 有可通过的用例 ✅；推送后流水线自动构建 ✅（四仓全绿）；
-    分支保护硬门禁 ⛔ 受 Free 套餐限制，本轮未达成
+    分支保护硬门禁 ✅（agent / agent-backend 已转公开并实测 CLEAN/BLOCKED；frontend / mobile 待定）
 
 - [ ] **13. 其他工程项**
   - [ ] 13.1 DB schema 迁移工具：手写 schema.sql → Flyway / Liquibase
