@@ -170,17 +170,25 @@
         `AgentClient.dispatchEvent` + `TraceAccumulator(.snapshot)` 改包私有
       - 全量绿：agent 173 项、backend 132 项，Failures/Errors 均 0
       - 顺带发现（未修，另案）：backend 的 Skill 上传校验只有 name 非空，无大小/长度/JSON schema 校验（关联 13.4）
-    - [ ] 12.2 CI 流水线 + CD（代码就绪，**待建仓首推**）
+    - [x] 12.2 CI 流水线 + CD ✅ 2026-10-13（CI 已上线并四仓全绿；仅「合并门禁」受套餐限制，见下）
       - [x] 四仓 `.github/workflows/ci.yml` 落盘：agent/backend `./mvnw -B clean test`（temurin 21 + maven 缓存）、
         frontend `pnpm build`、mobile `pnpm typecheck`；触发 pull_request + push master，concurrency 取消旧跑
       - [x] 前置动作：两 Java 仓补官方 `mvnw`（only-script 变体，`git update-index --chmod=+x` → mode 100755）；
         四仓补 `.gitattributes`（mvnw/*.sh 锁 LF，防 CRLF 的 shebang 在 CI 上报 bad interpreter）；mobile 补 `typecheck` 脚本
-      - [x] 本地绿基线：agent 173 / backend 132 / frontend `pnpm build` ✓ / mobile `pnpm typecheck`（exit 0）
+      - [x] 建仓并首推：GitHub 私有仓 `qwe986050091/{agent,agent-backend,agent-frontend,agent-mobile}`，
+        四仓 master 最新提交 CI 全绿（agent 1m14s / backend / frontend / mobile 49s）
       - [x] CD：`node .trae/skills/production-deploy/scripts/release.mjs <agent|backend|web|all>` 编排既有
         deploy-jars.sh / deploy-web.sh（构建含测试 → 产物体检 → scp → 远端原子切换 → 健康断言 → 清理）；
         实测 `web --tag 20261013-p212` 全绿（备份已生成、远端与本地临时文件自动清理、公网 200）
-      - [ ] 待人工：建 4 个 GitHub 私有仓 + remote + 首推 → 首个绿跑后配 required checks + 负向验收（故意改坏断言 → PR 变红 → 确认无法合并）
-  - 验收：`mvn test` 有可通过的用例 ✅；推送后流水线自动构建 ⏳（待首推）
+      - [x] 负向验收：临时 PR（含故意类型错误）→ CI 在 PR 上变红（`typecheck fail 27s`）→ 验证后关闭 PR 并删除分支，master 未受影响
+      - [ ] **合并门禁无法落地（Free 套餐限制）**：分支保护与 Rulesets 对**私有仓**均返回
+        `403 Upgrade to GitHub Pro or make this repository public to enable this feature`。
+        实测该 PR 的 `mergeStateStatus=UNSTABLE / mergeable=MERGEABLE`，即**GitHub 不会阻止合并**。
+        三条出路：① 升级 GitHub Pro（约 $4/月）；② 仓库转公开（无需付费，但代码公开可见）；
+        ③ 保持现状——CI 仍会在每次 push/PR 上运行并把红叉显示在 PR 上，靠人看，只是不强制。
+        **默认先按 ③ 走，选 ①/② 需你拍板。**
+  - 验收：`mvn test` 有可通过的用例 ✅；推送后流水线自动构建 ✅（四仓全绿）；
+    分支保护硬门禁 ⛔ 受 Free 套餐限制，本轮未达成
 
 - [ ] **13. 其他工程项**
   - [ ] 13.1 DB schema 迁移工具：手写 schema.sql → Flyway / Liquibase
