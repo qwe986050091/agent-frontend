@@ -190,10 +190,13 @@
           并从远端**重新 mirror clone 后复扫**，确认全历史 0 命中。
         - 结果：`agent`(d70a94b) 与 `agent-backend`(45e64e1) 已转 **public**，required check = `test`（check-run 名，非 UI 显示的 `ci / test`）。
         - **门禁真实有效（实测）**：空提交 PR → `mergeStateStatus=CLEAN`（证明必需检查匹配成功）；再推一个故意失败的测试 → `mergeStateStatus=BLOCKED` + `test fail`。之前是 UNSTABLE/MERGEABLE，现在真的挡得住了。
-      - [ ] 待你拍板：`agent-frontend` / `agent-mobile` 仍是 private（已确认全历史无凭据，转公开安全），需你决定是否一并转公开以拿到门禁
-      - 备注：本机直连 github.com 时通时断，推送失败可改走 VPN 代理：`git -c http.proxy=http://127.0.0.1:7890 push`（需 iKuuuVPN 在运行）
+      - [x] 四仓**全部转公开并配上门禁**：required check 分别为 agent/agent-backend `test`、agent-frontend `build`、agent-mobile `typecheck`（均取 check-run 名）。
+        实测有效性：`agent` 上「能过→CLEAN、故意失败→BLOCKED」；`agent-mobile` 上「能过→CLEAN」（验证 context 名匹配）。
+        另：公开仓的 Actions 时长免费不限量。改写前的镜像备份（含旧凭据）已按用户要求删除。
+      - 待你处理（安全建议）：吊销/重建那把 DeepSeek key，并更换生产 MySQL 口令（`wasdqew123` 弱口令且为生产库凭据；改后需同步 systemd env）
+      - 备注：本机直连 github.com 时通时断，推送失败可改走 VPN 代理：`git -c http.proxy=http://127.0.0.1:7890 push`（需 iKuuuVPN 在运行）；`gh` 侧设 `$env:HTTPS_PROXY` 同理
   - 验收：`mvn test` 有可通过的用例 ✅；推送后流水线自动构建 ✅（四仓全绿）；
-    分支保护硬门禁 ✅（agent / agent-backend 已转公开并实测 CLEAN/BLOCKED；frontend / mobile 待定）
+    分支保护硬门禁 ✅（四仓全部转公开并配好，实测「能过→CLEAN、失败→BLOCKED」）
 
 - [ ] **13. 其他工程项**
   - [ ] 13.1 DB schema 迁移工具：手写 schema.sql → Flyway / Liquibase
