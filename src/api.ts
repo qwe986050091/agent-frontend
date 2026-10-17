@@ -211,6 +211,8 @@ export interface ToolTrace {
   success: boolean
   error?: string | null
   durationMs: number
+  /** 发起该工具调用的 Agent 归属：null/缺省=主 Agent（顶层），非空=子代理技能名（Agent-as-Tool 嵌套归属） */
+  agentId?: string | null
 }
 
 export interface RagSegment {
