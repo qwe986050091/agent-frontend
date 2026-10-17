@@ -27,6 +27,35 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + '…' : s
 }
 
+/** 按发起 Agent 分组的工具调用组：null=主 Agent（顶层），非空=子代理技能名（Agent-as-Tool 嵌套归属） */
+interface ToolGroup {
+  key: string
+  label: string
+  isSub: boolean
+  tools: ToolTrace[]
+}
+
+/** 工具调用按 Agent 归属分组（保持首次出现顺序）；无子代理时只有一组，由调用方决定是否展示分组头 */
+function groupToolsByAgent(list: ToolTrace[]): ToolGroup[] {
+  const order: string[] = []
+  const buckets = new Map<string, ToolTrace[]>()
+  for (const t of list) {
+    const sub = t.agentId && t.agentId.trim() ? t.agentId.trim() : ''
+    const id = sub ? `sub:${sub}` : 'main'
+    if (!buckets.has(id)) {
+      buckets.set(id, [])
+      order.push(id)
+    }
+    buckets.get(id)!.push(t)
+  }
+  return order.map((id) => ({
+    key: id,
+    label: id === 'main' ? '主 Agent' : `子代理 · ${id.slice(4)}`,
+    isSub: id !== 'main',
+    tools: buckets.get(id)!,
+  }))
+}
+
 /**
  * Agent「思考过程」折叠面板：知识召回 + 工具调用。
  * 实时流与历史 trace 懒加载共用同一渲染；回答中的 [n] 点击可展开并定位到对应文档片段。
@@ -129,6 +158,28 @@ export function TracePanels({
   }
 
   if (toolList.length > 0) {
+    const groups = groupToolsByAgent(toolList)
+    // 仅当本轮真的出现了子代理（≥2 组）才展示分组头；否则保持平铺，避免单组场景多一层噪音
+    const showGroups = groups.length > 1
+    const renderTool = (t: ToolTrace, key: string) => (
+      <div className={`trace-tool ${t.success ? '' : 'trace-tool--fail'}`} key={key}>
+        <div className="trace-tool-head">
+          {t.success ? (
+            <CheckCircleFilled className="trace-tool-icon trace-tool-icon--ok" />
+          ) : (
+            <CloseCircleFilled className="trace-tool-icon trace-tool-icon--fail" />
+          )}
+          <span className="trace-tool-name">{t.name}</span>
+          <span className="trace-tool-args">{truncate(compactArgs(t.arguments), 48)}</span>
+          <span className="trace-tool-duration">{t.durationMs}ms</span>
+        </div>
+        {(t.result || t.error) && (
+          <pre className="trace-tool-result">
+            {t.success ? truncate(t.result || '', 300) : truncate(t.error || '', 300)}
+          </pre>
+        )}
+      </div>
+    )
     items.push({
       key: 'tool',
       label: (
@@ -139,25 +190,20 @@ export function TracePanels({
       ),
       children: (
         <div className="trace-tools">
-          {toolList.map((t, i) => (
-            <div className={`trace-tool ${t.success ? '' : 'trace-tool--fail'}`} key={`${t.name}-${i}`}>
-              <div className="trace-tool-head">
-                {t.success ? (
-                  <CheckCircleFilled className="trace-tool-icon trace-tool-icon--ok" />
-                ) : (
-                  <CloseCircleFilled className="trace-tool-icon trace-tool-icon--fail" />
-                )}
-                <span className="trace-tool-name">{t.name}</span>
-                <span className="trace-tool-args">{truncate(compactArgs(t.arguments), 48)}</span>
-                <span className="trace-tool-duration">{t.durationMs}ms</span>
-              </div>
-              {(t.result || t.error) && (
-                <pre className="trace-tool-result">
-                  {t.success ? truncate(t.result || '', 300) : truncate(t.error || '', 300)}
-                </pre>
-              )}
-            </div>
-          ))}
+          {showGroups
+            ? groups.map((g) => (
+                <div
+                  className={`trace-tool-group${g.isSub ? ' trace-tool-group--sub' : ''}`}
+                  key={g.key}
+                >
+                  <div className="trace-tool-group-head">
+                    <span className="trace-tool-group-name">{g.label}</span>
+                    <span className="trace-count">{g.tools.length}</span>
+                  </div>
+                  {g.tools.map((t, i) => renderTool(t, `${g.key}-${i}`))}
+                </div>
+              ))
+            : toolList.map((t, i) => renderTool(t, `${t.name}-${i}`))}
         </div>
       ),
     })

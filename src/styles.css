@@ -1222,6 +1222,24 @@ body {
   gap: 8px;
   padding: 2px 0;
 }
+/* 工具调用按发起 Agent 分组：主 Agent / 子代理（Agent-as-Tool 嵌套归属） */
+.trace-tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trace-tool-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a4a3a;
+}
+.trace-tool-group--sub {
+  padding-left: 10px;
+  border-left: 2px dashed #d8e0ea;
+}
 .trace-segment {
   background: #f7f9ff;
   border: 1px solid var(--border-soft, #eef1f6);
