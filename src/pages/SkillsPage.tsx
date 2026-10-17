@@ -9,6 +9,7 @@ import {
   Form,
   Input,
   Popconfirm,
+  Select,
   Space,
   Spin,
   Tag,
@@ -28,10 +29,13 @@ interface Skill {
   mounted: boolean
   createdBy: string
   toolNames: string[]
+  /** 技能类型：tool（普通技能包，默认）| agent（子代理：独立循环 + 私有工具） */
+  type?: string
 }
 
 interface SkillFormValues {
   name: string
+  type?: string
   shortDescription?: string
   detailedDescription?: string
   systemPrompt?: string
@@ -74,6 +78,7 @@ export default function SkillsPage() {
         method: 'POST',
         body: {
           name: values.name.trim(),
+          type: values.type || 'tool',
           shortDescription: values.shortDescription || '',
           detailedDescription: values.detailedDescription || '',
           systemPrompt: values.systemPrompt || '',
@@ -163,6 +168,7 @@ export default function SkillsPage() {
                     ) : (
                       <Tag color="gold">自定义</Tag>
                     )}
+                    {s.type === 'agent' && <Tag color="purple">子代理</Tag>}
                     {s.mounted && <Tag color="geekblue">已挂载</Tag>}
                   </Space>
                 }
@@ -213,7 +219,7 @@ export default function SkillsPage() {
               <CloudUploadOutlined />
             </p>
             <p className="ant-upload-text">点击或拖拽 Skill JSON 文件到此处上传</p>
-            <p className="ant-upload-hint">文件格式为 SkillDefinition JSON（含 name / systemPrompt / toolNames 等字段）</p>
+            <p className="ant-upload-hint">文件格式为 SkillDefinition JSON（含 name / type / systemPrompt / toolNames 等字段；type 缺省为 tool）</p>
           </Upload.Dragger>
 
           <Divider titlePlacement="start" plain>
@@ -233,6 +239,19 @@ export default function SkillsPage() {
               rules={[{ required: true, message: '请输入技能名称' }]}
             >
               <Input placeholder="如 weather_time_report" />
+            </Form.Item>
+            <Form.Item
+              name="type"
+              label="技能类型"
+              initialValue="tool"
+              extra="tool=普通技能包（工具直挂主 Agent）；agent=子代理（独立推理循环 + 私有工具，主 Agent 以委派/并行扇出方式调用）"
+            >
+              <Select
+                options={[
+                  { value: 'tool', label: '普通技能包（tool）' },
+                  { value: 'agent', label: '子代理（agent）' },
+                ]}
+              />
             </Form.Item>
             <Form.Item name="shortDescription" label="短描述">
               <Input placeholder="一句话说明技能用途" />
