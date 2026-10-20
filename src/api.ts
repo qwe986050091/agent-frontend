@@ -728,3 +728,145 @@ export async function streamChat(
     })
   }
 }
+
+// ==================== Agent 评测（P0-B） ====================
+
+/** 一次评测运行（聚合指标 + 元信息） */
+export interface EvalRunRow {
+  runId: string
+  label?: string | null
+  datasetName?: string | null
+  mode?: string | null
+  model?: string | null
+  judgeEnabled: boolean
+  total: number
+  passed: number
+  failed: number
+  passRate: number
+  /** 无对应样本时为 null（N/A），前端显示「—」 */
+  toolAccuracy?: number | null
+  citationAccuracy?: number | null
+  pointCoverage?: number | null
+  refusalRate?: number | null
+  avgTokens: number
+  avgDurationMs: number
+  generatedAt?: string | null
+  createdAt?: string | null
+}
+
+/** 逐例结果 */
+export interface EvalCaseRow {
+  caseId: string
+  category?: string | null
+  passed: boolean
+  failedChecks: string[]
+  /** 断言明细 JSON 字符串（[{name,passed,expected,actual,detail}]） */
+  checksJson?: string | null
+  answer?: string | null
+  actualTools: string[]
+  citedDocs: string[]
+  retrievedDocs: string[]
+  tokens: number
+  durationMs: number
+}
+
+export interface EvalRunDetail {
+  run: EvalRunRow
+  cases: EvalCaseRow[]
+}
+
+export interface EvalTrendPoint {
+  runId: string
+  label?: string | null
+  passRate: number
+  toolAccuracy?: number | null
+  citationAccuracy?: number | null
+  pointCoverage?: number | null
+  refusalRate?: number | null
+  createdAt?: string | null
+}
+
+export interface EvalStats {
+  latest: EvalRunRow | null
+  trend: EvalTrendPoint[]
+  runCount: number
+  candidateNew: number
+}
+
+export interface EvalDiffView {
+  baseRunId: string
+  currentRunId: string
+  base: EvalRunRow
+  current: EvalRunRow
+  fixedCases: string[]
+  brokenCases: string[]
+  metricDeltas: Record<string, number | null>
+}
+
+/** 反馈反哺的候选用例 */
+export interface EvalCandidateRow {
+  id: number
+  traceId: string
+  userId: string
+  question?: string | null
+  answer?: string | null
+  reasonCode?: string | null
+  comment?: string | null
+  suggestedCategory: string
+  suggestedPoints: string[]
+  status: string
+  createdAt?: string | null
+}
+
+export interface EvalRunPage {
+  content: EvalRunRow[]
+  page: number
+  size: number
+  total: number
+  totalPages: number
+}
+
+/** 运行列表（GET /api/admin/eval/runs） */
+export async function getEvalRuns(page = 0, size = 20): Promise<EvalRunPage> {
+  return api(`/api/admin/eval/runs?page=${page}&size=${size}`)
+}
+
+/** 运行详情（GET /api/admin/eval/runs/{runId}） */
+export async function getEvalRun(runId: string): Promise<EvalRunDetail> {
+  return api(`/api/admin/eval/runs/${encodeURIComponent(runId)}`)
+}
+
+/** 看板概览（GET /api/admin/eval/stats） */
+export async function getEvalStats(): Promise<EvalStats> {
+  return api('/api/admin/eval/stats')
+}
+
+/** 与基线运行对比（GET /api/admin/eval/runs/{runId}/diff?base=） */
+export async function getEvalDiff(runId: string, base: string): Promise<EvalDiffView> {
+  return api(`/api/admin/eval/runs/${encodeURIComponent(runId)}/diff?base=${encodeURIComponent(base)}`)
+}
+
+/** 候选用例列表（GET /api/admin/eval/candidates） */
+export async function getEvalCandidates(status = 'new'): Promise<EvalCandidateRow[]> {
+  const data = await api<{ content: EvalCandidateRow[] }>(
+    `/api/admin/eval/candidates?status=${encodeURIComponent(status)}`,
+  )
+  return data.content || []
+}
+
+/** 扫描点踩反馈生成候选用例（POST /api/admin/eval/candidates/refresh） */
+export async function refreshEvalCandidates(): Promise<{ created: number }> {
+  return api('/api/admin/eval/candidates/refresh', { method: 'POST' })
+}
+
+/** 采纳候选用例，返回可粘进数据集的 JSON 草稿 */
+export async function promoteEvalCandidate(
+  id: number,
+): Promise<{ id: number; status: string; caseDraft: string }> {
+  return api(`/api/admin/eval/candidates/${id}/promote`, { method: 'POST' })
+}
+
+/** 忽略候选用例 */
+export async function dismissEvalCandidate(id: number): Promise<{ id: number; status: string }> {
+  return api(`/api/admin/eval/candidates/${id}/dismiss`, { method: 'POST' })
+}
