@@ -7,6 +7,7 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  ExperimentOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
 /** 仅管理员可见的导航项（白名单由后端下发 user.admin，接口侧 AdminInterceptor 兜底 403） */
 const ADMIN_NAV_ITEMS = [
   { key: '/admin/feedback', icon: <MessageOutlined />, label: '反馈管理' },
+  { key: '/admin/eval', icon: <ExperimentOutlined />, label: '评测看板' },
 ]
 
 /**
