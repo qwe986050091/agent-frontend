@@ -230,6 +230,22 @@ export interface RagSegment {
 export interface RagTrace {
   query: string
   segments: RagSegment[]
+  /** 发起检索的 Agent：null/缺省=主 Agent，非空=子代理技能名（P1-C 调用树归属） */
+  agentId?: string | null
+}
+
+/** 一次子代理委派（父子 Agent 调用树节点） */
+export interface DelegationTrace {
+  id: string
+  /** 子代理技能名；planner=计划编排节点 */
+  agent: string
+  /** 父委派 id：null/缺省=主 Agent 直接发起 */
+  parentId?: string | null
+  task?: string
+  success: boolean
+  error?: string | null
+  durationMs: number
+  tokens: number
 }
 
 export interface UsageTrace {
@@ -251,6 +267,7 @@ export interface TraceDetail {
   usage: UsageTrace
   tools: ToolTrace[]
   recalls: RagTrace[]
+  delegations: DelegationTrace[]
 }
 
 export async function getTrace(traceId: string): Promise<TraceDetail> {
@@ -599,6 +616,7 @@ export async function streamChat(
     signal?: AbortSignal
     onTool?: (tool: ToolTrace) => void
     onRag?: (rag: RagTrace) => void
+    onDelegation?: (delegation: DelegationTrace) => void
     onUsage?: (usage: UsageTrace) => void
     onReset?: () => void
     onApproval?: (approval: ApprovalRequestData) => void
@@ -656,6 +674,10 @@ export async function streamChat(
     }
     if (eventName === 'rag') {
       try { handlers.onRag?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
+      return
+    }
+    if (eventName === 'delegation') {
+      try { handlers.onDelegation?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
       return
     }
     if (eventName === 'usage') {
