@@ -1,12 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { App as AntdApp } from 'antd'
 import { useNavigate } from 'react-router-dom'
-import { listNotifications, markNotificationRead, type AppNotification } from '../api'
+import {
+  listNotifications,
+  markNotificationRead,
+  streamNotifications,
+  type AppNotification,
+} from '../api'
 
 /**
- * PC 站内通知（P2-9 M2）：轮询拉取 + 站内 toast + 浏览器系统通知。
+ * PC 站内通知（P2-9 M2 + P1-E）：SSE 实时推送 + 游标轮询兜底 + 站内 toast + 浏览器系统通知。
  *
- * - 挂载于 MainLayout（登录后全局生效），前台 30s / 后台（document.hidden）120s 轮询；
+ * - 挂载于 MainLayout（登录后全局生效）：优先建立 SSE 长连接，事件到达即提示；
+ *   SSE 断开时回退到前台 30s / 后台（document.hidden）120s 轮询，重连后恢复实时；
  * - 游标（localStorage）跨标签共享：刷新/离线后从上次位置补齐，通知不丢；
  * - 多标签去重：localStorage 心跳选主标签，只有主标签弹通知（可见标签优先），
  *   已消费 id 经 BroadcastChannel 广播；竞态下收到他标签的消费广播即让位，杜绝重复提示；
@@ -28,6 +34,10 @@ const PAGE_SIZE = 20
 const MAX_PAGES_PER_TICK = 5
 /** 首次运行（本浏览器无游标）：只提示最近 10 分钟内的未读，避免历史通知刷屏 */
 const BOOTSTRAP_WINDOW_MS = 10 * 60 * 1000
+/** SSE 已连接时的兜底轮询节拍（防止漏推/代理缓存导致的丢事件） */
+const FALLBACK_WITH_SSE_MS = 5 * 60 * 1000
+/** SSE 断线重连间隔 */
+const SSE_RETRY_MS = 5_000
 
 const TAB_ID = Math.random().toString(36).slice(2)
 
@@ -191,7 +201,11 @@ export function useNotifications(enabled: boolean) {
     const schedule = () => {
       if (cancelled) return
       if (timer) clearTimeout(timer)
-      timer = setTimeout(() => void tick(), document.hidden ? BACKGROUND_MS : FOREGROUND_MS)
+      // SSE 在线时轮询降频为兜底；断线时恢复到常规节拍
+      const interval = sseConnected
+        ? FALLBACK_WITH_SSE_MS
+        : (document.hidden ? BACKGROUND_MS : FOREGROUND_MS)
+      timer = setTimeout(() => void tick(), interval)
     }
 
     /** 可见性变化：立即重跑一轮（可见标签抢占隐藏主标签，保证前台 30s 节拍） */
@@ -207,12 +221,51 @@ export function useNotifications(enabled: boolean) {
       }
     })
 
+    // ===== P1-E：SSE 实时推送（主标签消费，其余标签靠游标补齐） =====
+    let sseAbort: AbortController | null = null
+    let sseRetry: ReturnType<typeof setTimeout> | null = null
+    let sseConnected = false
+
+    const consumePush = (n: AppNotification) => {
+      // 已在游标之前的（断线期间的旧通知）：交给轮询补齐，避免重复提示
+      if (!n?.id || n.id <= readCursor()) return
+      if (!acquireOrRenewLeadership() || !canConsume()) return
+      localStorage.setItem(CURSOR_KEY, String(n.id))
+      show(n)
+      channel?.postMessage({ type: 'consumed', tabId: TAB_ID, cursor: n.id })
+    }
+
+    const connectSse = async () => {
+      if (cancelled) return
+      sseAbort = new AbortController()
+      try {
+        await streamNotifications({
+          signal: sseAbort.signal,
+          onOpen: () => {
+            sseConnected = true
+            // 重连成功先补一轮游标，覆盖断线期间遗漏的通知
+            void tick()
+          },
+          onNotification: consumePush,
+        })
+      } catch {
+        // 401/网络错误：交给轮询兜底，稍后重连
+      }
+      sseConnected = false
+      if (!cancelled) {
+        sseRetry = setTimeout(() => void connectSse(), SSE_RETRY_MS)
+      }
+    }
+
     document.addEventListener('visibilitychange', wake)
+    void connectSse()
     void tick()
 
     return () => {
       cancelled = true
       if (timer) clearTimeout(timer)
+      if (sseRetry) clearTimeout(sseRetry)
+      sseAbort?.abort()
       document.removeEventListener('visibilitychange', wake)
       channel?.close()
     }
