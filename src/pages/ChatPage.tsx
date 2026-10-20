@@ -17,6 +17,7 @@ import {
   type ApprovalRequestData,
   type ChatAttachment,
   type ChatImageInput,
+  type DelegationTrace,
   type FeedbackInfo,
   type RagTrace,
   type ToolTrace,
@@ -53,6 +54,8 @@ interface Message {
   traceId?: string
   tools?: ToolTrace[]
   recalls?: RagTrace[]
+  /** 子代理委派节点（父子 Agent 调用树） */
+  delegations?: DelegationTrace[]
   usage?: UsageTrace & { costYuan?: number }
   /** 本回合赞/踩反馈（history 接口附带；实时提交后本地回写） */
   feedback?: FeedbackInfo | null
@@ -302,8 +305,20 @@ export default function ChatPage() {
             }
             return copy
           }),
+        onDelegation: (delegation) =>
+          setMessages((m) => {
+            const copy = [...m]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant') {
+              copy[copy.length - 1] = {
+                ...last,
+                delegations: [...(last.delegations || []), delegation],
+              }
+            }
+            return copy
+          }),
         onUsage: (usage) => patchLast({ usage }),
-        onReset: () => patchLast({ tools: [], recalls: [], usage: undefined }),
+        onReset: () => patchLast({ tools: [], recalls: [], delegations: [], usage: undefined }),
         onApproval: (approval) =>
           setApprovalQueue((q) => [...q, approval]),
       }, imagesToSend)
@@ -563,6 +578,7 @@ export default function ChatPage() {
               )
             }
             const hasLiveTrace = (m.tools?.length || 0) > 0 || (m.recalls?.length || 0) > 0
+              || (m.delegations?.length || 0) > 0
             // 回答里的 [n] 只对应文档片段（历史对话片段不编号）
             const docSegmentCount = (m.recalls || []).reduce(
               (n, r) => n + (r.segments || []).filter((s) => s.type !== 'conversation').length,
@@ -580,6 +596,7 @@ export default function ChatPage() {
                     <TracePanels
                       tools={m.tools}
                       recalls={m.recalls}
+                      delegations={m.delegations}
                       citeSignal={citeSignals[i] ?? null}
                     />
                     {m.content && (

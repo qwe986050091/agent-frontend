@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { App, Collapse, Tag, Tooltip } from 'antd'
 import {
   BookOutlined,
@@ -8,7 +8,7 @@ import {
   ThunderboltOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
-import type { RagTrace, ToolTrace, UsageTrace } from '../api'
+import type { DelegationTrace, RagTrace, ToolTrace, UsageTrace } from '../api'
 
 /** 工具参数 JSON 紧凑展示（{"a":12.0,"b":8.0} → a=12, b=8 风格，超长截断） */
 function compactArgs(raw?: string): string {
@@ -71,14 +71,18 @@ export interface CiteSignal {
 export function TracePanels({
   tools,
   recalls,
+  delegations,
   citeSignal,
 }: {
   tools?: ToolTrace[]
   recalls?: RagTrace[]
+  /** 子代理委派节点：有值时工具面板升级为「主 Agent → 计划/子代理 → 工具」调用树 */
+  delegations?: DelegationTrace[]
   citeSignal?: CiteSignal | null
 }) {
   const toolList = tools || []
   const recallList = recalls || []
+  const delegationList = delegations || []
   const [activeKeys, setActiveKeys] = useState<string[]>([])
   const [flashNo, setFlashNo] = useState<number | null>(null)
 
@@ -96,7 +100,7 @@ export function TracePanels({
     return () => clearTimeout(timer)
   }, [citeSignal])
 
-  if (toolList.length === 0 && recallList.length === 0) return null
+  if (toolList.length === 0 && recallList.length === 0 && delegationList.length === 0) return null
 
   const segmentCount = recallList.reduce((n, r) => n + (r.segments?.length || 0), 0)
 
@@ -157,7 +161,7 @@ export function TracePanels({
     })
   }
 
-  if (toolList.length > 0) {
+  if (toolList.length > 0 || delegationList.length > 0) {
     const groups = groupToolsByAgent(toolList)
     // 仅当本轮真的出现了子代理（≥2 组）才展示分组头；否则保持平铺，避免单组场景多一层噪音
     const showGroups = groups.length > 1
@@ -180,15 +184,95 @@ export function TracePanels({
         )}
       </div>
     )
+
+    // 有委派节点时，按「主 Agent → 计划/子代理 → 工具」渲染调用树
+    const treeView = delegationList.length > 0
+    let tree: ReactNode = null
+    if (treeView) {
+      const byAgent = new Map<string, ToolTrace[]>()
+      for (const t of toolList) {
+        const agent = (t.agentId || '').trim()
+        const list = byAgent.get(agent)
+        if (list) list.push(t)
+        else byAgent.set(agent, [t])
+      }
+      const remaining = new Map(byAgent)
+      const toolsByDelegation = new Map<string, ToolTrace[]>()
+      for (const d of delegationList) {
+        const list = remaining.get(d.agent)
+        if (list && list.length > 0) {
+          toolsByDelegation.set(d.id, list)
+          remaining.delete(d.agent)
+        }
+      }
+      const ids = new Set(delegationList.map((d) => d.id))
+      const roots = delegationList.filter((d) => !d.parentId || !ids.has(d.parentId))
+      const childrenOf = (id: string) => delegationList.filter((d) => d.parentId === id)
+      const renderNode = (d: DelegationTrace, depth: number): ReactNode => (
+        <div className={`trace-agent-node${depth > 0 ? ' trace-agent-node--nested' : ''}`} key={d.id}>
+          <div className="trace-agent-head">
+            {d.success ? (
+              <CheckCircleFilled className="trace-tool-icon trace-tool-icon--ok" />
+            ) : (
+              <CloseCircleFilled className="trace-tool-icon trace-tool-icon--fail" />
+            )}
+            <span className="trace-agent-name">
+              {d.agent === 'planner' ? '计划编排' : `子代理 · ${d.agent}`}
+            </span>
+            <span className="trace-agent-task">{truncate(d.task || '', 56)}</span>
+            <span className="trace-agent-meta">
+              {d.tokens > 0 ? `${d.tokens} tok · ` : ''}
+              {d.durationMs}ms
+            </span>
+          </div>
+          {!d.success && d.error && <div className="trace-agent-error">{truncate(d.error, 200)}</div>}
+          {(toolsByDelegation.get(d.id) || []).length > 0 && (
+            <div className="trace-agent-tools">
+              {(toolsByDelegation.get(d.id) || []).map((t, i) => renderTool(t, `${d.id}-${i}`))}
+            </div>
+          )}
+          {depth < 4 && childrenOf(d.id).map((child) => renderNode(child, depth + 1))}
+        </div>
+      )
+      const mainTools = byAgent.get('') || []
+      // 未匹配到任何委派节点的子代理工具（历史数据/异常路径）仍按旧分组展示
+      const orphans = Array.from(remaining.entries()).filter(([agent]) => agent !== '')
+      tree = (
+        <div className="trace-tools">
+          {mainTools.length > 0 && (
+            <div className="trace-tool-group">
+              <div className="trace-tool-group-head">
+                <span className="trace-tool-group-name">主 Agent 直接调用</span>
+                <span className="trace-count">{mainTools.length}</span>
+              </div>
+              {mainTools.map((t, i) => renderTool(t, `main-${i}`))}
+            </div>
+          )}
+          {roots.map((d) => renderNode(d, 0))}
+          {orphans.map(([agent, list]) => (
+            <div className="trace-tool-group trace-tool-group--sub" key={`orphan-${agent}`}>
+              <div className="trace-tool-group-head">
+                <span className="trace-tool-group-name">子代理 · {agent}</span>
+                <span className="trace-count">{list.length}</span>
+              </div>
+              {list.map((t, i) => renderTool(t, `orphan-${agent}-${i}`))}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
     items.push({
       key: 'tool',
       label: (
         <span className="trace-panel-label">
-          <ToolOutlined /> 工具调用
+          <ToolOutlined /> {treeView ? '协作链路' : '工具调用'}
           <span className="trace-count">{toolList.length}</span>
         </span>
       ),
-      children: (
+      children: treeView ? (
+        tree
+      ) : (
         <div className="trace-tools">
           {showGroups
             ? groups.map((g) => (

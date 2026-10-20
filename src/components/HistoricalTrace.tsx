@@ -49,9 +49,14 @@ export default function HistoricalTrace({ traceId }: { traceId: string }) {
         </span>
       ) : detail ? (
         <>
-          <TracePanels tools={detail.tools} recalls={detail.recalls} />
-          {detail.tools.length === 0 && detail.recalls.length === 0 && (
-            <div className="history-trace-empty">该轮未触发工具调用或知识召回</div>
+          <TracePanels
+            tools={detail.tools}
+            recalls={detail.recalls}
+            delegations={detail.delegations}
+          />
+          {detail.tools.length === 0 && detail.recalls.length === 0
+            && (detail.delegations?.length || 0) === 0 && (
+            <div className="history-trace-empty">该轮未触发工具调用、知识召回或子代理协作</div>
           )}
           <TraceFooter usage={detail.usage} traceId={detail.traceId} />
         </>
