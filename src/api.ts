@@ -577,6 +577,90 @@ export async function markNotificationRead(id: number): Promise<void> {
 }
 
 /**
+ * 实时通知流（P1-E，SSE）：连接建立后服务端主动推送新通知。
+ *
+ * 与聊天的 SSE 一样用 fetch 手动解析（EventSource 不能带 Authorization 头）。
+ * 断线由调用方负责重连；游标轮询保留为离线/断线补齐的兜底。
+ */
+export async function streamNotifications(handlers: {
+  onNotification: (notification: AppNotification) => void
+  onOpen?: () => void
+  signal?: AbortSignal
+}): Promise<void> {
+  const res = await fetch('/api/notifications/stream', {
+    headers: {
+      ...(getToken() ? { Authorization: 'Bearer ' + getToken() } : {}),
+    },
+    signal: handlers.signal,
+  })
+  if (!res.ok || !res.body) {
+    throw new ApiError(`通知流连接失败 (${res.status})`, res.status)
+  }
+  handlers.onOpen?.()
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+  let eventName: string | null = null
+  let dataLines: string[] = []
+
+  const flush = () => {
+    if (dataLines.length === 0) {
+      eventName = null
+      return
+    }
+    const raw = dataLines.join('\n')
+    const name = eventName
+    eventName = null
+    dataLines = []
+    if (name !== 'notification') return
+    try {
+      const payload = JSON.parse(raw) as {
+        id: number
+        type: string
+        title: string
+        body?: string
+        targetConversationId?: number
+      }
+      handlers.onNotification({
+        id: payload.id,
+        type: payload.type,
+        title: payload.title,
+        body: payload.body ?? null,
+        targetConversationId: payload.targetConversationId ?? null,
+        read: false,
+        createdAt: new Date().toISOString(),
+      })
+    } catch {
+      /* 忽略坏事件 */
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    let idx: number
+    while ((idx = buffer.indexOf('\n')) >= 0) {
+      let line = buffer.slice(0, idx)
+      buffer = buffer.slice(idx + 1)
+      if (line.endsWith('\r')) line = line.slice(0, -1)
+      if (line === '') {
+        flush()
+        continue
+      }
+      if (line.startsWith(':')) continue
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim()
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trimStart())
+      }
+    }
+  }
+  flush()
+}
+
+/**
  * 流式对话（SSE）：POST /api/chat/stream
  *
  * 服务端逐 token 推送 text/event-stream，这里用 fetch + ReadableStream
