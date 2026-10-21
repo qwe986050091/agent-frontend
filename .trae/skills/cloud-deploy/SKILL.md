@@ -38,13 +38,13 @@ description: "Agent 项目云端发布技能：前端静态站部署到旧阿里
 ## 流程一：前端部署（旧服务器，零中断）
 
 ```powershell
-# 1. 本地构建（cwd: d:\code\agent_frontend），确认 dist/assets 下生成新 hash 文件
+# 1. 本地构建（cwd: d:\code\agent-platform\apps\web），确认 dist/assets 下生成新 hash 文件
 node node_modules/vite/bin/vite.js build
 node node_modules/typescript/bin/tsc -b   # 退出码 0 才继续
 
 # 2. 上传到临时目录
 ssh old "rm -rf /tmp/web-new && mkdir -p /tmp/web-new"
-scp -r d:/code/agent_frontend/dist old:/tmp/web-new/
+scp -r d:/code/agent-platform/apps/web/dist old:/tmp/web-new/
 
 # 3. 原子切换（旧目录先改名备份，成功后删除；Nginx 读静态文件无需 reload）
 ssh old "rm -rf /opt/agent/web.old && mv /opt/agent/web /opt/agent/web.old && mv /tmp/web-new/dist /opt/agent/web && rm -rf /opt/agent/web.old /tmp/web-new"
