@@ -1215,6 +1215,67 @@ body {
   align-items: center;
   justify-content: center;
 }
+/* ===== 上下文构成面板（P1-D）：四段预算与实际用量 ===== */
+.trace-context-total {
+  font-size: 11px;
+  color: #8a94a8;
+  font-variant-numeric: tabular-nums;
+}
+.trace-context {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 0;
+}
+.trace-context-meta {
+  font-size: 11.5px;
+  color: #8a94a8;
+}
+.trace-context-row {
+  background: #f7f9ff;
+  border: 1px solid var(--border-soft, #eef1f6);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+.trace-context-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  margin-bottom: 5px;
+}
+.trace-context-name {
+  font-weight: 600;
+  color: #3d56a6;
+}
+.trace-context-tokens {
+  margin-left: auto;
+  font-size: 11px;
+  color: #8a94a8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.trace-context-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: #e8edf7;
+  overflow: hidden;
+}
+.trace-context-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #7aa2ff;
+  transition: width 0.3s ease;
+}
+/* 单段超出预算（受保护段不裁剪时显示红色水位） */
+.trace-context-fill--over {
+  background: #f08a8a;
+}
+.trace-context-detail {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #8a94a8;
+}
 .trace-segments,
 .trace-tools {
   display: flex;

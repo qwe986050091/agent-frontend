@@ -261,6 +261,25 @@ export interface UsageTrace {
   costYuan?: number
 }
 
+/** 上下文构成单段（P1-D）：system / summary / retrieval / history */
+export interface ContextSegment {
+  key: 'system' | 'summary' | 'retrieval' | 'history' | string
+  label: string
+  budgetTokens: number
+  tokens: number
+  truncated: boolean
+  detail?: string | null
+}
+
+/** 本轮上下文四段预算与实际用量（event: context，P1-D；token 数为估算值） */
+export interface ContextTrace {
+  strategy: string
+  totalBudgetTokens: number
+  totalTokens: number
+  overBudget: boolean
+  segments: ContextSegment[]
+}
+
 /** 历史 trace 懒加载返回（GET /api/chat/traces/{traceId}） */
 export interface TraceDetail {
   traceId: string
@@ -669,6 +688,7 @@ export async function streamNotifications(handlers: {
  * 事件类型：
  *  - 默认事件：token 片段 → onToken
  *  - event: tool/rag/usage：trace 事件 → onTool/onRag/onUsage
+ *  - event: context：上下文四段预算构成（P1-D）→ onContext
  *  - event: error：SSE 已提交后的终态业务错误（如模型拒绝图片）→ 抛出带可读文案的 ApiError
  *  - event: memory / data:[DONE]：服务端内部处理/结束标记，不到前端
  *
@@ -701,6 +721,8 @@ export async function streamChat(
     onTool?: (tool: ToolTrace) => void
     onRag?: (rag: RagTrace) => void
     onDelegation?: (delegation: DelegationTrace) => void
+    /** 上下文构成（P1-D）：回合末在 usage 之前到达 */
+    onContext?: (context: ContextTrace) => void
     onUsage?: (usage: UsageTrace) => void
     onReset?: () => void
     onApproval?: (approval: ApprovalRequestData) => void
@@ -762,6 +784,10 @@ export async function streamChat(
     }
     if (eventName === 'delegation') {
       try { handlers.onDelegation?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
+      return
+    }
+    if (eventName === 'context') {
+      try { handlers.onContext?.(JSON.parse(data)) } catch { /* 忽略坏事件 */ }
       return
     }
     if (eventName === 'usage') {
