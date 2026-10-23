@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2-G JVM 调优与压测实证报告 · 2026-10-23</title>
+<style>
+  :root{--bg:#ffffff;--fg:#1f2328;--muted:#656d76;--line:#d8dee4;--accent:#0969da;--accent-bg:#ddf4ff;
+    --warn:#9a6700;--warn-bg:#fff8c5;--ok:#1a7f37;--ok-bg:#dafbe1;--block:#a40e26;--block-bg:#ffebe9;--code-bg:#f6f8fa;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:14px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 72px;}
+  h1{font-size:27px;margin:0 0 8px;letter-spacing:-.3px;}
+  h2{font-size:19px;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  h3{font-size:15px;margin:24px 0 8px;}
+  p{margin:8px 0;}
+  .meta{color:var(--muted);font-size:12.5px;margin-bottom:4px;}
+  .lead{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:18px 0;}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:12.5px;}
+  th,td{border:1px solid var(--line);padding:7px 9px;vertical-align:top;text-align:left;}
+  th{background:var(--code-bg);font-weight:600;}
+  code{background:var(--code-bg);padding:1px 5px;border-radius:4px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.6;}
+  .tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;margin-right:4px;white-space:nowrap;}
+  .ok-t{background:#dafbe1;color:#1a7f37;}
+  .part-t{background:#fff8c5;color:#9a6700;}
+  .no-t{background:#ffebe9;color:#a40e26;}
+  .note{background:var(--warn-bg);border:1px solid #f0e2a0;border-radius:8px;padding:12px 14px;margin:14px 0;font-size:12.5px;}
+  .ok{background:var(--ok-bg);border:1px solid #b7e4c7;border-radius:8px;padding:12px 14px;margin:14px 0;font-size:12.5px;}
+  .fail{background:var(--block-bg);border:1px solid #ffd0cd;border-radius:8px;padding:12px 14px;margin:14px 0;font-size:12.5px;}
+  ul,ol{padding-left:22px;} li{margin:4px 0;}
+  .foot{color:var(--muted);font-size:12px;margin-top:36px;}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0;}
+  .kpi div{flex:1 1 170px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--code-bg);}
+  .kpi b{display:block;font-size:20px;line-height:1.25;}
+  .kpi span{color:var(--muted);font-size:11.5px;}
+  .small{font-size:11.5px;color:var(--muted);}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:12.5px;}
+  .bar-name{width:150px;flex:none;color:#3d56a6;}
+  .bar-track{flex:1;height:12px;background:#eef2f7;border-radius:6px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:6px;background:#7aa2ff;}
+  .bar-fill.warn{background:#e6a23c;}
+  .bar-val{width:74px;text-align:right;flex:none;font-variant-numeric:tabular-nums;color:#5a657a;}
+  .spark-row{display:flex;align-items:center;gap:12px;margin:10px 0;font-size:12px;}
+  .spark-label{width:172px;flex:none;color:#3d56a6;}
+  .spark{flex:1;height:56px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid var(--line);position:relative;}
+  .spark::after{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #e3b341;opacity:.75;}
+  .spark span{flex:1;background:#7aa2ff;border-radius:2px 2px 0 0;min-height:2px;}
+  .spark.zgc span{background:#8b7cf6;}
+  .spark.tuned span{background:#e6a23c;}
+  .spark-val{width:126px;flex:none;text-align:right;color:#5a657a;font-variant-numeric:tabular-nums;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 0;font-size:11.5px;color:var(--muted);}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+  a{color:var(--accent);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>P2-G JVM 调优与压测实证报告</h1>
+<p class="meta">日期：2026-10-23 · 对象：<code>agent</code> 服务（simple-agent 1.0.0，Spring Boot 3.5 / LangChain4j 1.17.2）</p>
+<p class="meta">配套工具：<a href="../../../agent/perf/README.md"><code>d:\code\agent\perf</code></a> · 原始数据：<code>perf/results/p2g-final/summary.json</code> · 关联路线图：<a href="./personal-gap-analysis-and-roadmap-2026-10-14.html">个人能力差距分析与 90 天补齐路线图</a></p>
+
+<div class="lead">
+<b>一句话结论：</b>生产 <code>-Xms128m -Xmx768m -XX:+UseG1GC</code> <b>保持不变</b>。
+100 并发下三种 GC 配置全部 300/300 成功、p95 706–735ms；500 并发时约 47%–51% 的请求被
+SSE 线程池快速拒绝（503），<b>真正的瓶颈是「24 活跃 + 100 排队」的线程池容量，不是 GC</b>。
+ZGC 停顿接近零（≤0.06ms），但堆占用是 G1 的 1.8–2.8 倍、CPU 更高，4c4g / 768m 机器不建议切换；
+G1 调优参数（Xms=Xmx、MaxGCPauseMillis=100）没有带来吞吐收益，反而最大停顿与堆占用更差。
+</div>
+
+<div class="kpi">
+  <div><b>100%</b><span>100 并发成功率（3 种 GC 配置）</span></div>
+  <div><b>706–735ms</b><span>100 并发 p95（中位数）</span></div>
+  <div><b>≈50%</b><span>500 并发成功率（其余 503）</span></div>
+  <div><b>≤0.06ms</b><span>ZGC 最大停顿（G1 为 16–35ms）</span></div>
+  <div><b>49.5% / 34.6%</b><span>agent / backend 行覆盖率（门禁 47% / 32%）</span></div>
+</div>
+
+<h2>一、测试环境与方法</h2>
+
+<table>
+<thead><tr><th>项目</th><th>值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>硬件</td><td>Windows 11，32 逻辑核，31.2 GB 内存</td><td>使用 <code>-XX:ActiveProcessorCount=4</code> 固定为 4 核，与生产 4c4g 对齐</td></tr>
+<tr><td>JDK</td><td>Temurin 21.0.12.1+1</td><td>与生产 Corretto 21.0.12.1 同版本</td></tr>
+<tr><td>堆与元空间</td><td><code>-Xms128m -Xmx768m -XX:MaxMetaspaceSize=192m</code></td><td>与 <code>agent.service</code> 生产参数一致</td></tr>
+<tr><td>GC 配置</td><td>G1（生产）/ ZGC / G1 调优</td><td>G1 调优 = <code>-Xms768m -XX:MaxGCPauseMillis=100 -XX:G1HeapRegionSize=4m</code></td></tr>
+<tr><td>上游模型</td><td>本地 OpenAI 兼容 stub：40 个 token 块 × 5ms</td><td>约 200ms/请求；隔离真实 LLM 的延迟与费用波动，只测 agent JVM</td></tr>
+<tr><td>RAG / 工具</td><td>RAG 关闭、代码沙箱关闭、MCP 懒加载不连接</td><td>聚焦 SSE 线程池、内存与 GC；生产 RAG 的额外 CPU/内存另计</td></tr>
+<tr><td>压测入口</td><td><code>POST /api/agent/chat/stream</code></td><td>与前端实际使用的流式链路一致</td></tr>
+<tr><td>SSE 线程池</td><td>core 8 / max 24 / queue 100 / AbortPolicy</td><td>代码事实：<code>AgentController</code>；满载直接 503</td></tr>
+<tr><td>压测规模</td><td>100 并发 × 300 请求；500 并发 × 500 请求</td><td>每个「配置 × 并发」重启 JVM 跑 3 次，表中为 3 次中位数；GC 最大停顿取最差</td></tr>
+<tr><td>采样</td><td><code>/actuator/prometheus</code> 每 200ms</td><td>堆用量、线程数、SSE 在途数、GC 计数/停顿；GC 日志用 <code>-Xlog:gc*</code> 交叉核对</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+<b>为什么用 stub：</b>P2-G 的目标是 JVM（线程/内存/GC）的实证，而不是评测模型质量。
+真实 LLM 的尾延迟（数秒级、随上游限流波动）会淹没 GC 与线程池的差异，且 500 并发真实调用成本与风险不可控。
+stub 让每次请求的 token 流形态稳定（40 块 / 200ms），因此三组 GC 配置的差异可归因于 JVM 本身。
+</div>
+
+<h2>二、结果总表</h2>
+
+<h3>2.1 100 并发（300 请求 / 组）</h3>
+<table>
+<thead><tr><th>配置</th><th>成功</th><th>503</th><th>RPS</th><th>p50</th><th>p95</th><th>p99</th><th>TTFT p95</th><th>堆峰值</th><th>GC 次数</th><th>GC 总停顿</th><th>最大停顿</th></tr></thead>
+<tbody>
+<tr><td><b>G1（生产参数）</b></td><td><span class="tag ok-t">300/300</span></td><td>0</td><td>149.3</td><td>592.9ms</td><td><b>735.5ms</b></td><td>754.8ms</td><td>141.9ms</td><td>119 MB</td><td>10</td><td>73.6ms</td><td>16.2ms</td></tr>
+<tr><td>ZGC</td><td><span class="tag ok-t">300/300</span></td><td>0</td><td>151.5</td><td>605.5ms</td><td>706.3ms</td><td>729.6ms</td><td>134.5ms</td><td>332 MB</td><td>12</td><td>0.3ms</td><td>0.06ms</td></tr>
+<tr><td>G1 调优</td><td><span class="tag ok-t">300/300</span></td><td>0</td><td>151.6</td><td>611.0ms</td><td>715.2ms</td><td>734.4ms</td><td>126.7ms</td><td>381 MB</td><td>1</td><td>26.1ms</td><td>26.1ms</td></tr>
+</tbody>
+</table>
+
+<h3>2.2 500 并发（500 请求 / 组）</h3>
+<table>
+<thead><tr><th>配置</th><th>成功</th><th>503</th><th>RPS</th><th>p50</th><th>p95</th><th>p99</th><th>TTFT p95</th><th>堆峰值</th><th>GC 次数</th><th>GC 总停顿</th><th>最大停顿</th></tr></thead>
+<tbody>
+<tr><td><b>G1（生产参数）</b></td><td><span class="tag part-t">254/500</span></td><td>246</td><td>182.9</td><td>1290.0ms</td><td><b>1360.4ms</b></td><td>1372.2ms</td><td>472.4ms</td><td>200 MB</td><td>9</td><td>75.4ms</td><td>18.6ms</td></tr>
+<tr><td>ZGC</td><td><span class="tag part-t">235/500</span></td><td>265</td><td>204.1</td><td>1073.2ms</td><td>1125.3ms</td><td>1130.3ms</td><td>387.3ms</td><td>356 MB</td><td>22</td><td>0.45ms</td><td>0.05ms</td></tr>
+<tr><td>G1 调优</td><td><span class="tag part-t">240/500</span></td><td>260</td><td>182.5</td><td>1161.3ms</td><td>1223.3ms</td><td>1225.2ms</td><td>401.2ms</td><td>338 MB</td><td>2</td><td>52.6ms</td><td>34.3ms</td></tr>
+</tbody>
+</table>
+<p class="small">表中为 3 次运行的中位数；三组配置均无 Full GC。500 并发的成功数存在 ±20 左右的连接爬坡波动，趋势稳定。</p>
+
+<h3>2.3 p95 延迟对比（500 并发为主要差异点）</h3>
+<div class="bar-row"><span class="bar-name">G1 · 100</span><span class="bar-track"><span class="bar-fill" style="width:52.5%"></span></span><span class="bar-val">735.5ms</span></div>
+<div class="bar-row"><span class="bar-name">ZGC · 100</span><span class="bar-track"><span class="bar-fill" style="width:50.5%"></span></span><span class="bar-val">706.3ms</span></div>
+<div class="bar-row"><span class="bar-name">G1 调优 · 100</span><span class="bar-track"><span class="bar-fill" style="width:51.1%"></span></span><span class="bar-val">715.2ms</span></div>
+<div class="bar-row"><span class="bar-name">G1 · 500</span><span class="bar-track"><span class="bar-fill warn" style="width:97.2%"></span></span><span class="bar-val">1360.4ms</span></div>
+<div class="bar-row"><span class="bar-name">ZGC · 500</span><span class="bar-track"><span class="bar-fill" style="width:80.4%"></span></span><span class="bar-val">1125.3ms</span></div>
+<div class="bar-row"><span class="bar-name">G1 调优 · 500</span><span class="bar-track"><span class="bar-fill" style="width:87.4%"></span></span><span class="bar-val">1223.3ms</span></div>
+<p class="small">100 并发三组几乎无差异（±4%）；500 并发时 ZGC 因停顿更低、并发回收，p95 略好，但代价见下一节。</p>
+
+<h2>三、内存曲线与 GC 分析</h2>
+
+<p>下图为压测窗口内每 200ms 采样的堆用量（纵轴按 768MB 堆满量程；虚线为 50% 水位）。</p>
+
+<div class="legend">
+  <span><i style="background:#7aa2ff"></i>G1（生产参数）</span>
+  <span><i style="background:#8b7cf6"></i>ZGC</span>
+  <span><i style="background:#e6a23c"></i>G1 调优</span>
+  <span>虚线：384MB（50% heap）</span>
+</div>
+
+<h3>3.1 100 并发</h3>
+<div class="spark-row">
+  <span class="spark-label">G1 · 峰值 119 MB</span>
+  <span class="spark" title="768MB heap"><span style="height:6.5%" title="50.1MB"></span><span style="height:9.9%" title="75.9MB"></span><span style="height:8.9%" title="68.5MB"></span><span style="height:11.4%" title="87.2MB"></span><span style="height:11.9%" title="91.5MB"></span><span style="height:14.1%" title="108.5MB"></span></span>
+  <span class="spark-val">6 个采样点</span>
+</div>
+<div class="spark-row">
+  <span class="spark-label">ZGC · 峰值 332 MB</span>
+  <span class="spark zgc" title="768MB heap"><span style="height:17.7%" title="136MB"></span><span style="height:43.2%" title="332MB"></span><span style="height:30.5%" title="234MB"></span><span style="height:14.1%" title="108MB"></span><span style="height:37.0%" title="284MB"></span><span style="height:38.8%" title="298MB"></span><span style="height:38.8%" title="298MB"></span></span>
+  <span class="spark-val">7 个采样点</span>
+</div>
+<div class="spark-row">
+  <span class="spark-label">G1 调优 · 峰值 381 MB</span>
+  <span class="spark tuned" title="768MB heap"><span style="height:14.8%" title="113.3MB"></span><span style="height:36.6%" title="281.3MB"></span><span style="height:49.6%" title="381.3MB"></span><span style="height:11.4%" title="87.3MB"></span><span style="height:31.7%" title="243.3MB"></span><span style="height:34.8%" title="267.3MB"></span><span style="height:34.8%" title="267.3MB"></span></span>
+  <span class="spark-val">7 个采样点</span>
+</div>
+
+<h3>3.2 500 并发</h3>
+<div class="spark-row">
+  <span class="spark-label">G1 · 峰值 200 MB</span>
+  <span class="spark" title="768MB heap"><span style="height:7.1%" title="54.4MB"></span><span style="height:9.9%" title="76MB"></span><span style="height:26.0%" title="199.8MB"></span><span style="height:15.9%" title="122.1MB"></span><span style="height:16.0%" title="123.1MB"></span></span>
+  <span class="spark-val">5 个采样点</span>
+</div>
+<div class="spark-row">
+  <span class="spark-label">ZGC · 峰值 356 MB</span>
+  <span class="spark zgc" title="768MB heap"><span style="height:16.9%" title="130MB"></span><span style="height:44.3%" title="340MB"></span><span style="height:44.3%" title="340MB"></span><span style="height:25.5%" title="196MB"></span><span style="height:18.0%" title="138MB"></span></span>
+  <span class="spark-val">5 个采样点</span>
+</div>
+<div class="spark-row">
+  <span class="spark-label">G1 调优 · 峰值 338 MB</span>
+  <span class="spark tuned" title="768MB heap"><span style="height:13.0%" title="99.9MB"></span><span style="height:9.3%" title="71.8MB"></span><span style="height:38.9%" title="298.6MB"></span><span style="height:43.0%" title="330.6MB"></span><span style="height:46.7%" title="358.6MB"></span></span>
+  <span class="spark-val">5 个采样点</span>
+</div>
+
+<h3>3.3 GC 数据</h3>
+<table>
+<thead><tr><th>配置 / 并发</th><th>GC 次数</th><th>总停顿</th><th>最大停顿</th><th>Full GC</th><th>堆峰值（中位 / 最差）</th><th>CPU 峰值</th><th>线程峰值</th></tr></thead>
+<tbody>
+<tr><td>G1 / 100</td><td>10</td><td>73.6ms</td><td>16.2ms</td><td>0</td><td>119 / 124 MB</td><td>0.245</td><td>198</td></tr>
+<tr><td>G1 / 500</td><td>9</td><td>75.4ms</td><td>18.6ms</td><td>0</td><td>200 / 204 MB</td><td>0.207</td><td>369</td></tr>
+<tr><td>ZGC / 100</td><td>12</td><td>0.3ms</td><td>0.06ms</td><td>0</td><td>332 / 336 MB</td><td>0.276</td><td>208</td></tr>
+<tr><td>ZGC / 500</td><td>22</td><td>0.45ms</td><td>0.05ms</td><td>0</td><td>356 / 384 MB</td><td>0.282</td><td>347</td></tr>
+<tr><td>G1 调优 / 100</td><td>1</td><td>26.1ms</td><td>26.1ms</td><td>0</td><td>381 / 446 MB</td><td>0.267</td><td>183</td></tr>
+<tr><td>G1 调优 / 500</td><td>2</td><td>52.6ms</td><td>34.3ms</td><td>0</td><td>338 / 359 MB</td><td>0.237</td><td>372</td></tr>
+</tbody>
+</table>
+
+<div class="ok">
+<b>GC 结论：</b>
+① 三种配置在 768MB 堆下都<b>没有 Full GC、没有 OOM</b>，G1 最大停顿 16–19ms，远低于 SSE 的 p95（735–1360ms），
+<b>GC 停顿不是当前延迟的主因</b>；② ZGC 停顿确实接近零，但堆占用是 G1 的 1.8–2.8 倍
+（ZGC 需要并发标记/转移的空间与 CPU），试跑阶段曾观测到 676MB 峰值 —— 在 768m 堆上没有安全余量；
+③ G1 调优（Xms=Xmx + MaxGCPauseMillis=100）把 GC 次数从 10 次降到 1–2 次，但最大停顿反而升到 26–34ms、
+堆占用升到 338–446MB，吞吐没有提升，属于「用内存换更少的 GC 次数」，不适合 4c4g 生产。
+</div>
+
+<h2>四、瓶颈定位</h2>
+
+<h3>4.1 第一瓶颈：SSE 线程池容量（24 活跃 + 100 排队）</h3>
+<p>
+500 并发时，<code>agent_sse_active</code> 峰值为 <b>123–125</b>（G1/ZGC/G1 调优），
+与代码里的「max 24 + queue 100 = 124 个在途」几乎完全吻合；超过的请求被
+<code>AbortPolicy</code> 立即拒绝，表现为 503（246–265/500），而不是排队超时。
+这正是设计上的快速失败，但也意味着<b>单实例硬上限约 124 个在途对话</b>。
+</p>
+<p>
+100 并发时 300 个请求全部成功（24 活跃 + 76 排队），p95 735ms；
+500 并发时请求要在队列里多等约 0.4–0.6s（TTFT p95 从 142ms 升到 472ms），
+p95 升到 1.1–1.4s —— <b>延迟增长主要来自排队，而非 GC 或 CPU</b>。
+</p>
+
+<h3>4.2 第二瓶颈：Tomcat 线程随连接数增长，但没有泄漏</h3>
+<p>
+线程峰值：100 并发 183–208；500 并发 331–396（G1 369、ZGC 347、调优 372）。
+线程数随客户端连接增长，压测结束随进程回收；没有出现线程数持续攀升或 Full GC 的泄漏信号。
+生产若把并发提高到数百，需同时关注 Tomcat 线程、堆外内存与文件描述符。
+</p>
+
+<h3>4.3 内存：G1 余量充足，ZGC 需更大堆</h3>
+<p>
+G1 在 100/500 并发下堆峰值仅 119/200MB（768m 的 15%/26%），余量充足；
+ZGC 为 332/356MB（43%/46%），且试跑峰值近 676MB；G1 调优为 381/338MB。
+生产 4c4g 机器上还有 MySQL / PG / Redis / RocketMQ / Prometheus 等进程，
+JVM 堆不能只看 768m 本身上限，ZGC 的额外占用会挤压系统页缓存与其它进程。
+</p>
+
+<h2>五、参数结论与上线建议</h2>
+
+<div class="ok">
+<b>保持现状（推荐）：</b>
+<pre>ExecStart=/usr/bin/java -Xms128m -Xmx768m -XX:MaxMetaspaceSize=192m -jar /opt/agent/agent.jar</pre>
+G1 默认参数在本负载下延迟、吞吐、内存三项均衡；100 并发 p95 735ms，无 Full GC；
+500 并发时以 503 快速失败保护上游，符合现有「有界队列 + AbortPolicy」的稳定性设计。
+</div>
+
+<ul>
+<li><b>不要切换 ZGC</b>（当前 4c4g / 768m）：停顿收益（16ms → 0.06ms）对 p95 的贡献被排队与上游延迟掩盖，
+却带来 1.8–2.8 倍堆占用和更高 CPU；只有把堆提升到 1.5–2GB 且有 CPU 余量时再评估。</li>
+<li><b>不要设置 <code>-Xms768m</code></b>：G1 调优实验显示 GC 次数减少但最大停顿、堆占用变差，吞吐无提升；
+固定大堆还会让 4c4g 机器的内存长期被 JVM 占住。</li>
+<li><b>容量规划以 124 在途为基线</b>：若业务需要 &gt;100 并发对话，优先在网关层排队/限流（429 + 重试提示），
+而不是无脑放大线程池；确实要扩容时，建议 max 48 + queue 200，并同步验证上游 LLM 限流、堆余量与 Tomcat 线程。</li>
+<li><b>监控告警</b>：把 <code>agent_sse_active &gt; 100</code>（容量 80%）与 503 比例 &gt;5% 加入 Prometheus 告警；
+GC 侧关注 Full GC 次数与老年代峰值，而不是单次 Young GC 的毫秒数。</li>
+<li><b>生产 GC 日志</b>：建议加 <code>-Xlog:gc*:file=/opt/agent/logs/gc.log:time,uptime,level,tags:filecount=5,filesize=20M</code>
+（本次压测已用同一格式），便于复盘；对吞吐影响可忽略。</li>
+</ul>
+
+<h2>六、JaCoCo 覆盖率门禁（P2-G 第二部分）</h2>
+
+<p>两个 Java 仓均接入 <code>jacoco-maven-plugin 0.8.15</code>：<code>prepare-agent</code> 采集、
+<code>report</code> 出 HTML、<code>check</code> 绑定 <code>verify</code> 阶段校验行覆盖率。</p>
+
+<table>
+<thead><tr><th>仓库</th><th>测试类 / 用例</th><th>行覆盖</th><th>门禁阈值</th><th>报告</th></tr></thead>
+<tbody>
+<tr><td>agent</td><td>48 类 / 275 用例</td><td><b>49.53%</b>（2715/5481）</td><td><span class="tag ok-t">47%</span></td><td><code>target/site/jacoco/index.html</code></td></tr>
+<tr><td>agent-backend</td><td>22 类 / 157 用例</td><td><b>34.63%</b>（1412/4077）</td><td><span class="tag ok-t">32%</span></td><td><code>target/site/jacoco/index.html</code></td></tr>
+</tbody>
+</table>
+
+<p>
+CI 两个仓均从 <code>./mvnw -B clean test</code> 改为 <code>./mvnw -B clean verify</code>，
+PR 低于阈值直接 fail；本地执行 <code>.\mvnw.cmd -B clean verify</code> 可复现。
+</p>
+
+<div class="note">
+<b>覆盖率短板（后续可补，不在本次范围）：</b>
+agent 的 <code>config</code> / <code>skill.impl</code> / <code>tools.code</code> 为 0%，
+<code>controller</code> 仅 19.7%；backend 的 <code>auth</code> / <code>knowledge</code> / <code>feedback</code> / <code>usage</code> 为 0%。
+本次阈值取「当前基线下方 2 个点左右」，先建立回归门禁，再逐步抬高。
+</div>
+
+<h2>七、压测过程中顺带修复</h2>
+<div class="lead">
+<b><code>rag.enabled=false</code> 启动失败：</b>禁用 RAG 时 <code>RagConfig</code> 不再提供
+<code>EmbeddingStore</code>/<code>Path</code> Bean，但 <code>RagService</code>、<code>RagController</code>
+仍被组件扫描装配，启动时报
+<code>Parameter 1 of constructor in RagService required a bean of type 'java.nio.file.Path'</code>。
+已为两者补上 <code>@ConditionalOnProperty(prefix="rag", name="enabled", havingValue="true", matchIfMissing=true)</code>，
+与配置注释「rag.enabled=false 时整套 RAG Bean 不装配」的语义一致；本次压测即以
+<code>RAG_ENABLED=false</code> 启动验证通过，全量单测/verify 仍全绿。
+</div>
+
+<h2>八、复现步骤</h2>
+<pre>cd d:\code\agent
+
+# 1) 构建（含测试；生产发布纪律）
+.\mvnw.cmd -B clean verify
+
+# 2) 准备 JDK 21（与生产同版本）后跑压测
+$env:JAVA_HOME = 'C:\path\to\jdk-21'
+node perf/run-bench.mjs --java "$env:JAVA_HOME\bin\java.exe" --repeats 3
+
+# 3) 结果
+#   perf/results/&lt;yyyyMMdd-HHmmss&gt;/summary.json
+#   gc-&lt;config&gt;-&lt;level&gt;-r&lt;n&gt;.log（GC 原始日志）
+#   load-&lt;config&gt;-&lt;level&gt;-r&lt;n&gt;.json（逐轮压测结果）</pre>
+<p>工具与参数说明见 <a href="../../../agent/perf/README.md"><code>d:\code\agent\perf\README.md</code></a>；
+本次原始聚合数据已随仓库提交在 <code>perf/results/p2g-final/summary.json</code>（日志类中间产物不入库）。</p>
+
+<h2>九、附录：GC 日志片段</h2>
+<h3>G1（生产参数，100 并发）</h3>
+<pre>[info][gc] GC(21) Pause Young (Concurrent Start) (G1 Evacuation Pause) 116M-&gt;67M(241M) 6.887ms
+[info][gc] GC(22) Pause Remark 87M-&gt;87M(230M) 16.821ms
+[info][gc] GC(22) Pause Cleanup 89M-&gt;89M(230M) 0.267ms</pre>
+<h3>ZGC（100 并发）</h3>
+<pre>[info][gc,phases] GC(6) Pause Mark Start 0.043ms
+[info][gc,phases] GC(6) Pause Mark End 0.034ms
+[info][gc,phases] GC(6) Pause Relocate Start 0.022ms</pre>
+<h3>G1 调优（100 并发）</h3>
+<pre>[info][gc] GC(11) Pause Young (Normal) (G1 Evacuation Pause) 274M-&gt;48M(768M) 22.090ms
+[info][gc] GC(12) Pause Young (Normal) (G1 Evacuation Pause) 232M-&gt;51M(768M) 25.036ms</pre>
+
+<p class="foot">
+本报告基于 2026-10-23 本机实测（JDK 21.0.12.1，3 次中位数）+ 代码静态事实（SSE 线程池 8/24/100、
+AbortPolicy、Tomcat 默认线程配置）。本机 32 核通过 <code>-XX:ActiveProcessorCount=4</code> 固定为 4 核；
+绝对延迟会随机器与上游变化，GC/线程池的相对结论可迁移。JaCoCo 数据来自同一次 <code>clean verify</code>。
+</p>
+
+</div>
+</body>
+</html>
