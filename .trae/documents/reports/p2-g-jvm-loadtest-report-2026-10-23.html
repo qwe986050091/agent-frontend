@@ -60,7 +60,7 @@
 
 <h1>P2-G JVM 调优与压测实证报告</h1>
 <p class="meta">日期：2026-10-23 · 对象：<code>agent</code> 服务（simple-agent 1.0.0，Spring Boot 3.5 / LangChain4j 1.17.2）</p>
-<p class="meta">配套工具：<a href="../../../agent/perf/README.md"><code>d:\code\agent\perf</code></a> · 原始数据：<code>perf/results/p2g-final/summary.json</code> · 关联路线图：<a href="./personal-gap-analysis-and-roadmap-2026-10-14.html">个人能力差距分析与 90 天补齐路线图</a></p>
+<p class="meta">配套工具：<a href="../../../../agent/perf/README.md"><code>d:\code\agent\perf</code></a> · 原始数据：<code>perf/results/p2g-final/summary.json</code> · 关联路线图：<a href="./personal-gap-analysis-and-roadmap-2026-10-14.html">个人能力差距分析与 90 天补齐路线图</a></p>
 
 <div class="lead">
 <b>一句话结论：</b>生产 <code>-Xms128m -Xmx768m -XX:+UseG1GC</code> <b>保持不变</b>。
@@ -303,7 +303,7 @@ node perf/run-bench.mjs --java "$env:JAVA_HOME\bin\java.exe" --repeats 3
 #   perf/results/&lt;yyyyMMdd-HHmmss&gt;/summary.json
 #   gc-&lt;config&gt;-&lt;level&gt;-r&lt;n&gt;.log（GC 原始日志）
 #   load-&lt;config&gt;-&lt;level&gt;-r&lt;n&gt;.json（逐轮压测结果）</pre>
-<p>工具与参数说明见 <a href="../../../agent/perf/README.md"><code>d:\code\agent\perf\README.md</code></a>；
+<p>工具与参数说明见 <a href="../../../../agent/perf/README.md"><code>d:\code\agent\perf\README.md</code></a>；
 本次原始聚合数据已随仓库提交在 <code>perf/results/p2g-final/summary.json</code>（日志类中间产物不入库）。</p>
 
 <h2>九、附录：GC 日志片段</h2>

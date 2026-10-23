@@ -2,6 +2,7 @@
 
 > 来源：2026-09-06 对 agent / agent_backend / agent_frontend 三工程的全面审视
 > 用法：完成一项把 `[ ]` 改成 `[x]`；优先级 P0（生产硬伤）→ P1（Agent 能力）→ P2（可观测运营）→ P3（工程体系）
+> 2026-10-24：路线图 P0–P2 已完成；下一阶段待办已独立为 [post-roadmap-backlog-2026-10-24.md](./post-roadmap-backlog-2026-10-24.md)，本文件保留为历史 TODO。
 
 ---
 
