@@ -287,6 +287,8 @@ export interface TraceDetail {
   tools: ToolTrace[]
   recalls: RagTrace[]
   delegations: DelegationTrace[]
+  /** 上下文构成（P1-D）：老回合未采集到时为 null/缺省 */
+  context?: ContextTrace | null
 }
 
 export async function getTrace(traceId: string): Promise<TraceDetail> {
