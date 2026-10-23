@@ -5,10 +5,11 @@ import {
   CheckCircleFilled,
   CloseCircleFilled,
   CopyOutlined,
+  ProfileOutlined,
   ThunderboltOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
-import type { DelegationTrace, RagTrace, ToolTrace, UsageTrace } from '../api'
+import type { ContextTrace, DelegationTrace, RagTrace, ToolTrace, UsageTrace } from '../api'
 
 /** 工具参数 JSON 紧凑展示（{"a":12.0,"b":8.0} → a=12, b=8 风格，超长截断） */
 function compactArgs(raw?: string): string {
@@ -72,12 +73,15 @@ export function TracePanels({
   tools,
   recalls,
   delegations,
+  context,
   citeSignal,
 }: {
   tools?: ToolTrace[]
   recalls?: RagTrace[]
   /** 子代理委派节点：有值时工具面板升级为「主 Agent → 计划/子代理 → 工具」调用树 */
   delegations?: DelegationTrace[]
+  /** 本轮上下文四段预算构成（P1-D，event: context） */
+  context?: ContextTrace | null
   citeSignal?: CiteSignal | null
 }) {
   const toolList = tools || []
@@ -100,11 +104,61 @@ export function TracePanels({
     return () => clearTimeout(timer)
   }, [citeSignal])
 
-  if (toolList.length === 0 && recallList.length === 0 && delegationList.length === 0) return null
+  if (toolList.length === 0 && recallList.length === 0 && delegationList.length === 0 && !context) {
+    return null
+  }
 
   const segmentCount = recallList.reduce((n, r) => n + (r.segments?.length || 0), 0)
 
   const items = []
+  // 上下文构成（P1-D）：四段预算与实际用量（估算值），超预算/发生过裁剪时给出标记
+  if (context && (context.segments?.length || 0) > 0) {
+    const strategyLabel = context.strategy === 'history-priority' ? '最近原文优先' : '均衡'
+    items.push({
+      key: 'context',
+      label: (
+        <span className="trace-panel-label">
+          <ProfileOutlined /> 上下文构成
+          <span className="trace-context-total">
+            ≈{context.totalTokens} / {context.totalBudgetTokens} tok
+          </span>
+          {context.overBudget && <Tag color="red">超预算</Tag>}
+        </span>
+      ),
+      children: (
+        <div className="trace-context">
+          <div className="trace-context-meta">
+            策略「{strategyLabel}」 · token 数为估算值，用于预算控制与展示
+          </div>
+          {context.segments.map((seg) => {
+            const pct = seg.budgetTokens > 0
+              ? Math.min(100, Math.round((seg.tokens / seg.budgetTokens) * 100))
+              : 0
+            const over = seg.budgetTokens > 0 && seg.tokens > seg.budgetTokens
+            return (
+              <div className="trace-context-row" key={seg.key}>
+                <div className="trace-context-head">
+                  <span className="trace-context-name">{seg.label || seg.key}</span>
+                  <span className="trace-context-tokens">
+                    {seg.tokens} / {seg.budgetTokens}
+                  </span>
+                  {seg.truncated && <Tag color="orange">已裁剪</Tag>}
+                </div>
+                <div className="trace-context-bar">
+                  <div
+                    className={`trace-context-fill${over ? ' trace-context-fill--over' : ''}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                {seg.detail && <div className="trace-context-detail">{seg.detail}</div>}
+              </div>
+            )
+          })}
+        </div>
+      ),
+    })
+  }
+
   if (recallList.length > 0) {
     let docNo = 0
     items.push({
