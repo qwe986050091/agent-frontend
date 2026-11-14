@@ -5,3 +5,7 @@ debug.log
 .vscode/
 .idea/
 .trae/
+
+# 内部文档/技能/路线图不入库（2026-11-15，本地保留）：根目录 md 一律忽略，README 例外
+/*.md
+!/README.md
