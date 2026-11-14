@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Card, Form, Input, Tabs, Typography, App as AntdApp } from 'antd'
-import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import characterSplash from '../assets/character-splash.jpg'
@@ -10,6 +10,8 @@ interface LoginFormValues {
   username: string
   password: string
   nickname?: string
+  /** 注册邀请码：仅新注册需要，校验在服务端完成 */
+  inviteCode?: string
 }
 
 export default function LoginPage() {
@@ -24,7 +26,12 @@ export default function LoginPage() {
       if (mode === 'login') {
         await login(values.username.trim(), values.password)
       } else {
-        await register(values.username.trim(), values.password, values.nickname?.trim() || '')
+        await register(
+          values.username.trim(),
+          values.password,
+          values.nickname?.trim() || '',
+          values.inviteCode?.trim() || '',
+        )
       }
       message.success(mode === 'login' ? '登录成功' : '注册成功，已自动登录')
       navigate('/')
@@ -116,6 +123,17 @@ export default function LoginPage() {
                     ]}
                   >
                     <Input.Password prefix={<LockOutlined />} placeholder="密码（至少 6 位）" size="large" />
+                  </Form.Item>
+                  <Form.Item
+                    name="inviteCode"
+                    rules={[{ required: true, message: '请输入邀请码' }]}
+                  >
+                    <Input.Password
+                      prefix={<SafetyOutlined />}
+                      placeholder="邀请码（向管理员获取）"
+                      size="large"
+                      autoComplete="off"
+                    />
                   </Form.Item>
                   <Button type="primary" htmlType="submit" block size="large" loading={loading}>
                     注册并登录

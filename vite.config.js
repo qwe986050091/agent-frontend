@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 // Vite 开发服务器：把 /api 请求代理到后端，避免跨域问题
 export default defineConfig({
+    // 站点根路径是门户页，对话助手整体部署在 /chat/ 子路径下；
+    // 静态资源与 index.html 中的 %BASE_URL% 均据此生成
+    base: '/chat/',
     plugins: [react()],
     server: {
         port: 5173,

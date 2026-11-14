@@ -3,6 +3,17 @@
 const TOKEN_KEY = 'agent_token'
 const USER_KEY = 'agent_user'
 
+/**
+ * 应用挂在 /chat/ 子路径下（vite base），router 内部跳转由 basename 处理；
+ * 这里只服务 401 时用 location.href 做的整页跳转，必须拼上前缀，否则会跳出应用落到门户。
+ */
+const APP_BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+const LOGIN_PATH = APP_BASE + '/login'
+
+function redirectToLogin() {
+  location.href = LOGIN_PATH
+}
+
 export interface AuthUser {
   username: string
   nickname: string
@@ -109,7 +120,7 @@ export function uploadDocument(
     xhr.onload = () => {
       if (xhr.status === 401) {
         clearAuth()
-        if (!location.pathname.startsWith('/login')) location.href = '/login'
+        if (!location.pathname.startsWith(LOGIN_PATH)) redirectToLogin()
         reject(new ApiError('未登录或登录已过期', 401))
         return
       }
@@ -170,8 +181,8 @@ export async function api<T = any>(path: string, options: ApiOptions = {}): Prom
 
   if (res.status === 401) {
     clearAuth()
-    if (!path.startsWith('/api/auth/') && !location.pathname.startsWith('/login')) {
-      location.href = '/login'
+    if (!path.startsWith('/api/auth/') && !location.pathname.startsWith(LOGIN_PATH)) {
+      redirectToLogin()
     }
     throw new ApiError(data.message || '未登录或登录已过期', 401)
   }
@@ -191,7 +202,7 @@ export async function fetchAuthBlob(path: string): Promise<Blob> {
   })
   if (res.status === 401) {
     clearAuth()
-    if (!location.pathname.startsWith('/login')) location.href = '/login'
+    if (!location.pathname.startsWith(LOGIN_PATH)) redirectToLogin()
     throw new ApiError('未登录或登录已过期', 401)
   }
   if (!res.ok) {
@@ -759,7 +770,7 @@ export async function streamChat(
 
   if (res.status === 401) {
     clearAuth()
-    if (!location.pathname.startsWith('/login')) location.href = '/login'
+    if (!location.pathname.startsWith(LOGIN_PATH)) redirectToLogin()
     throw new ApiError('未登录或登录已过期', 401)
   }
   if (!res.ok || !res.body) {

@@ -4,7 +4,7 @@ import { api, clearAuth, getStoredUser, getToken, saveAuth, type AuthUser } from
 interface AuthContextValue {
   user: AuthUser | null
   login: (username: string, password: string) => Promise<void>
-  register: (username: string, password: string, nickname: string) => Promise<void>
+  register: (username: string, password: string, nickname: string, inviteCode: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -41,10 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u)
   }
 
-  async function register(username: string, password: string, nickname: string) {
+  async function register(username: string, password: string, nickname: string, inviteCode: string) {
     const data = await api<{ token: string; username: string; nickname: string; admin?: boolean }>(
       '/api/auth/register',
-      { method: 'POST', body: { username, password, nickname } },
+      { method: 'POST', body: { username, password, nickname, inviteCode } },
     )
     const u: AuthUser = { username: data.username, nickname: data.nickname, admin: !!data.admin }
     saveAuth(data.token, u)

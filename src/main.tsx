@@ -49,7 +49,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       }}
     >
       <AntdApp>
-        <BrowserRouter>
+        <BrowserRouter basename="/chat">
           <AuthProvider>
             <App />
           </AuthProvider>
